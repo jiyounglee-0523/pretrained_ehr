@@ -27,19 +27,51 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         time_window = args.time_window
 
-        path = './{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length)
-        data = pickle.load(open(path, 'rb'))
+        if source_file == 'mimic' or 'eicu':
+            path = '/data/private/ehr_pretrained/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length)
+            data = pickle.load(open(path, 'rb'))
 
-        # change column name
-        if source_file == 'mimic':
-            data = data.rename({'HADM_ID':'ID'}, axis='columns')
-        elif source_file == 'eicu':
-            data = data.rename({'patientunitstayid':'ID'}, axis='columns')
+            # change column name
+            if source_file == 'mimic':
+                data = data.rename({'HADM_ID':'ID'}, axis='columns')
+            elif source_file == 'eicu':
+                data = data.rename({'patientunitstayid':'ID'}, axis='columns')
+
+            self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, item,
+                                                                                                       time_window,
+                                                                                                       target, offset,
+                                                                                                       down_sampling,
+                                                                                                       padding)
+
         else:
-            raise NotImplementedError
+            path = '/data/private/ehr_pretrained/mimic_{}_{}_{}.pkl'.format(time_window, item, max_length)
+            mimic_data = pickle.load(open(path, 'rb'))
 
-        self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, item, time_window, target, offset, down_sampling, padding)
+            path = '/data/private/ehr_pretrained/eicu_{}_{}_{}.pkl'.format(time_window, item, max_length)
+            eicu_data = pickle.load(open(path, 'rb'))
 
+            mimic_data = mimic_data.rename({'HADM_ID': 'ID'}, axis='columns')
+            eicu_data = eicu_data.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            mimic_item_id, mimic_item_offset, mimic_item_offset_order, mimic_item_target = self.preprocess(mimic_data, item,
+                                                                                                       time_window,
+                                                                                                       target, offset,
+                                                                                                       down_sampling,
+                                                                                                       padding)
+
+            eicu_item_id, eicu_item_offset, eicu_item_offset_order, eicu_item_target = self.preprocess(eicu_data,
+                                                                                                           item,
+                                                                                                           time_window,
+                                                                                                           target,
+                                                                                                           offset,
+                                                                                                           down_sampling,
+                                                                                                           padding)
+            #
+            # self.item_id
+            # self.item_offset
+            # self.item_offset_order
+            # self.item_target
+            
 
     def __len__(self):
         return self.item_id.size(0)
