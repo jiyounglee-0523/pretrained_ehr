@@ -26,7 +26,7 @@ class Trainer(nn.Module):
         else:
             raise NotImplementedError
 
-        if args.item == 'diagnosis':
+        if args.target == 'diagnosis':
             output_size = 17
         else:
             output_size = 1
@@ -41,7 +41,7 @@ class Trainer(nn.Module):
         best_loss = float('inf')
         best_auroc = 0.0
         best_auprc = 0.0
-        for n_epoch in range(self.n_epochs):
+        for n_epoch in range(self.n_epochs + 1):
 
             preds_train = []
             truths_train = []
@@ -49,7 +49,7 @@ class Trainer(nn.Module):
 
             for iter, sample in enumerate(self.dataloader):
                 self.model.train()
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
 
                 item_id, item_offset, item_offset_order, lengths, target = sample
                 item_id.to(self.device) ; item_offset.to(self.device) ; item_offset_order.to(self.device)
