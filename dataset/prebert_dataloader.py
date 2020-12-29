@@ -37,8 +37,10 @@ class healthcare_dataset(Dataset):
         # change column name
         if source_file == 'mimic':
             data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+            self.word_max_length = 15
         elif source_file == 'eicu':
             data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+            self.word_max_length = 15
         else:
             raise NotImplementedError
 
@@ -57,7 +59,7 @@ class healthcare_dataset(Dataset):
         single_item_name.extend(['[PAD]'] * pad_length)
         assert len(single_item_name) == int(self.max_length), "item_name padded wrong"
 
-        single_item_name = self.tokenizer(single_item_name, padding = 'max_length', return_tensors='pt', max_length=int(self.max_length))  # seq_len x words
+        single_item_name = self.tokenizer(single_item_name, padding = 'max_length', return_tensors='pt', max_length=self.word_max_length)  # seq_len x words
 
 
         # single_item_offset = torch.cat([self.item_offset[item]] * seq_len, dim=0)

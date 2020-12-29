@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 class ClinicalBERT(nn.Module):
     def __init__(self, max_length):
         super().__init__()
-        self.max_length = int(max_length)
+        self.max_length = 15     # hard coding!
         self.model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
 
     def forward(self, x):
@@ -16,8 +16,13 @@ class ClinicalBERT(nn.Module):
         x['input_ids'] = x['input_ids'].reshape(-1, self.max_length).cuda()
         x['token_type_ids'] = x['token_type_ids'].reshape(-1, self.max_length).cuda()
         x['attention_mask'] = x['attention_mask'].reshape(-1, self.max_length).cuda()
+        print('pre-BERT data loaded DONE!')
+        print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
 
         _, cls_output = self.model(**x)   # cls_output shape (B * S, 768)
+        print('pre-BERT forward calculation DOEN!')
+        print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
+
         return cls_output
 
 
@@ -51,8 +56,8 @@ class post_RNN(nn.Module):
         # goes through prebert
         x = self.prebert(x)
 
-        x = x.reshape(-1, self.max_length, 768)
-        lengths = lengths.squeeze()
+        x = x.reshape(-1, 150, 768)     # hard coding!
+        lengths = lengths.squeeze().long()
         B = x.size(0)
 
         if self.freeze:    # freeze the output

@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--embedding_dim', type=int, default=128)
     parser.add_argument('--hidden_dim', type=int, default=128)
     parser.add_argument('--rnn_bidirection', type=bool, default=True)
@@ -24,8 +24,6 @@ def main():
     parser.add_argument('--path', type=str, default='./')
     parser.add_argument('--filename', type=str, default='tester')
     args = parser.parse_args()
-
-    torch.cuda.empty_cache()
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

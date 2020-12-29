@@ -55,12 +55,16 @@ class Bert_Trainer():
                 self.optimizer.zero_grad(set_to_none=True)
 
                 item_name, item_target, seq_len = sample
-                item_target = item_target.to(self.device) ; seq_len = seq_len.to(self.device)
+                item_target = item_target.to(self.device)
+                print('DataLoader Done!')
+                print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
 
                 y_pred = self.model(item_name, seq_len)
                 loss = self.criterion(y_pred, item_target.float().to(self.device))
+                print('Forward Done!')
 
                 loss.backward()
+                print('Backward Done!')
                 self.optimizer.step()
 
                 avg_train_loss += loss.item() / len(self.dataloader)
