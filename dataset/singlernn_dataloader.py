@@ -23,13 +23,13 @@ def singlernn_get_dataloader(args, validation_index, data_type = 'train'):
 class eicu_dataset(Dataset):
     def __init__(self, args, validation_index, data_type):
         source_file = args.source_file
-        target = args.target
+        self.target = args.target
         item = args.item
         max_length = args.max_length
         time_window = args.time_window
 
 
-        path = '/data/private/ehr_pretrained/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length)
+        path = '/home/jylee/data/pretrained_ehr/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length)
         data = pickle.load(open(path, 'rb'))
 
         # change column name
@@ -42,7 +42,7 @@ class eicu_dataset(Dataset):
 
         self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, validation_index, data_type, item,
                                                                                                        time_window,
-                                                                                                       target)
+                                                                                                       self.target)
 
 
     def __len__(self):
@@ -54,6 +54,13 @@ class eicu_dataset(Dataset):
         single_item_offset_order = self.item_offset_order[item]
         single_target = self.item_target[item]
         single_length = torch.LongTensor([torch.max(torch.nonzero(single_item_id.data)) + 1])
+
+        if self.target == 'dx_depth1_unique':
+            single_target = [int(j) for j in single_target]
+            target_list = torch.Tensor(single_target).long()
+
+            single_target = torch.zeros(18)
+            single_target[target_list - 1] = 1  # shape of 18
 
         return single_item_id, single_item_offset, single_item_offset_order, single_length, single_target
 
@@ -72,6 +79,8 @@ class eicu_dataset(Dataset):
             offset_order_window = '{}_offset_order_{}hr'.format(item, time_window)               ##### 바꿔야 한다!! '{}_offset_order_{}jr'.format(item, time_window
             id_window = '{}_id_{}hr'.format(item, time_window)
             target_fold = '{}_fold'.format(target)
+            if target == 'dx_depth1_unique':
+                target_fold = 'dx_fold'
 
         # extract cohort
         cohort = cohort[['ID', id_window, offset_window, offset_order_window, target, target_fold]]
@@ -93,7 +102,10 @@ class eicu_dataset(Dataset):
         item_offset = pad_sequence(item_offset, batch_first=True)
 
         # target
-        item_target = torch.LongTensor(cohort[target].values.tolist())     # shape of (B)
+        if target == 'dx_depth1_unique':
+            item_target = cohort[target].values.tolist()
+        else:
+            item_target = torch.LongTensor(cohort[target].values.tolist())     # shape of (B)
 
         return item_id, item_offset, item_offset_order, item_target
 

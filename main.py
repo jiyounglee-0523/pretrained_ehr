@@ -6,23 +6,24 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--bert_induced', type=bool, default='True')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
-    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'diagnosis'], type=str, default='readmission')
+    parser.add_argument('--bert_induced', type=bool, default=True)
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='both')
+    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--embedding_dim', type=int, default=128)
     parser.add_argument('--hidden_dim', type=int, default=128)
     parser.add_argument('--rnn_bidirection', type=bool, default=True)
-    parser.add_argument('--n_epochs', type=int, default=5)
+    parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', type=bool, default=True)
     parser.add_argument('--path', type=str, default='./')
-    parser.add_argument('--filename', type=str, default='tester')
+    parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -57,6 +58,7 @@ def main():
         trainer = Trainer(args, train_loader, valid_loader, device)
         trainer.train()
 
+        print('Finished training valid_index: {}'.format(valid_index))
 
 if __name__ == '__main__':
     main()

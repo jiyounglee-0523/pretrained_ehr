@@ -26,25 +26,47 @@ def bertinduced_get_dataloader(args, validation_index, data_type='train'):
 class healthcare_dataset(Dataset):
     def __init__(self, args, validation_index, data_type):
         source_file = args.source_file
-        target = args.target
+        self.target = args.target
         item = args.item
         self.max_length = args.max_length
         time_window = args.time_window
+        self.word_max_length = args.word_max_length
 
-        path = '/home/jylee/data/pretrained_ehr/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length)
-        data = pickle.load(open(path, 'rb'))
+        if source_file == 'both':
+            path = '/home/jylee/data/pretrained_ehr/mimic_{}_{}_{}.pkl'.format(time_window, item, self.max_length)
+            mimic = pickle.load(open(path,'rb'))
 
-        # change column name
-        if source_file == 'mimic':
-            data = data.rename({'HADM_ID': 'ID'}, axis='columns')
-            self.word_max_length = 15
-        elif source_file == 'eicu':
-            data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
-            self.word_max_length = 15
+            path = '/home/jylee/data/pretrained_ehr/eicu_{}_{}_{}.pkl'.format(time_window, item, self.max_length)
+            eicu = pickle.load(open(path, 'rb'))
+
+            mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
+            eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            mimic_item_name, mimic_item_offset, mimic_item_offset_order, mimic_item_target = self.preprocess(mimic, validation_index, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_offset, eicu_item_offset_order, eicu_item_target = self.preprocess(eicu, validation_index, data_type, item, time_window, self.target)
+
+            mimic_item_name.extend(eicu_item_name)
+            self.item_name = mimic_item_name
+            self.item_offset = torch.cat((mimic_item_offset, eicu_item_offset), dim=0)
+            self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)
+            if self.target == 'dx_depth1_unique':
+                mimic_item_target.extend(eicu_item_target)
+                self.item_target = mimic_item_target
+            else:
+                self.item_target = torch.cat((mimic_item_target, eicu_item_target))
+
         else:
-            raise NotImplementedError
+            path = '/home/jylee/data/pretrained_ehr/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length)
+            data = pickle.load(open(path, 'rb'))
 
-        self.item_name, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, validation_index, data_type, item, time_window, target)
+            # change column name
+            if source_file == 'mimic':
+                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+
+            elif source_file == 'eicu':
+                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            self.item_name, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, validation_index, data_type, item, time_window, self.target)
 
         self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
 
@@ -67,6 +89,13 @@ class healthcare_dataset(Dataset):
         # single_item_offset = self.item_offset[item]
         # single_item_offset_order = self.item_offset_order[item]
         single_target = self.item_target[item]
+        if self.target == 'dx_depth1_unique':
+            single_target = [int(j) for j in single_target]
+            target_list = torch.Tensor(single_target).long()
+
+            single_target = torch.zeros(18)
+            single_target[target_list - 1] = 1     # shape of 18
+
         # implement single_length later
 
         return single_item_name, single_target, seq_len
@@ -80,6 +109,8 @@ class healthcare_dataset(Dataset):
             offset_window = 'order_offset_{}hr'.format(time_window)
             offset_order_window = '{}_offset_order_{}hr'.format(item, time_window)
             target_fold = '{}_fold'.format(target)
+            if target == 'dx_depth1_unique':
+                target_fold = 'dx_fold'
 
         # extract cohort
         cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold]]
@@ -100,6 +131,9 @@ class healthcare_dataset(Dataset):
         item_offset = pad_sequence(item_offset, batch_first=True)
 
         # target
-        item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of (B)
+        if target == 'dx_depth1_unique':
+            item_target = cohort[target].values.tolist()
+        else:
+            item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of (B)
 
         return item_name, item_offset, item_offset_order, item_target

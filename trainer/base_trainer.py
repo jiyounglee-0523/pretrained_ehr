@@ -5,6 +5,7 @@ import wandb
 
 from models.rnn_models import *
 from utils.loss import *
+from utils.trainer_utils import *
 
 class Trainer(nn.Module):
     def __init__(self, args, train_dataloader, valid_dataloader, device):
@@ -12,8 +13,10 @@ class Trainer(nn.Module):
 
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
-        self.criterion = FocalLoss()
         self.device = device
+
+        wandb.init(project='pretrained_ehr')
+        wandb.config.update(args)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -26,16 +29,19 @@ class Trainer(nn.Module):
         else:
             raise NotImplementedError
 
-        if args.target == 'diagnosis':
-            output_size = 17
+        if args.target == 'dx_depth1_unique':
+            output_size = 18
+            self.criterion = nn.BCEWithLogitsLoss()
         else:
             output_size = 1
+            self.criterion = FocalLoss()
 
         self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-        # wandb.init(project='pretrained_ehr')
-        # wandb.config.update(args)
+        self.early_stopping = EarlyStopping(patience=7, verbose=True)
+
+
 
     def train(self):
         best_loss = float('inf')
@@ -84,17 +90,20 @@ class Trainer(nn.Module):
 
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
-            # wandb.log({'train_loss': avg_train_loss,
-            #            'train_auroc': auroc_train,
-            #            'train_auprc': auprc_train,
-            #            'eval_loss': avg_eval_loss,
-            #            'eval_auroc': auroc_eval,
-            #            'eval_auprc': auprc_eval})
+            wandb.log({'train_loss': avg_train_loss,
+                       'train_auroc': auroc_train,
+                       'train_auprc': auprc_train,
+                       'eval_loss': avg_eval_loss,
+                       'eval_auroc': auroc_eval,
+                       'eval_auprc': auprc_eval})
 
-            if n_epoch % 20 == 0:
-                print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
-                print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
+            print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
+            print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
+            self.early_stopping(avg_eval_loss, self.model)
+            if self.early_stopping.early_stop:
+                print('Early stopping')
+                break
 
 
     def evaluation(self):

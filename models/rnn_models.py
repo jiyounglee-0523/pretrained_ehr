@@ -20,9 +20,9 @@ class RNNmodels(nn.Module):
         self.device = device
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        if args.model_type == 'gru':
+        if args.rnn_model_type == 'gru':
             self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
-        elif args.model_type == 'lstm':
+        elif args.rnn_model_type == 'lstm':
             self.model = nn.LSTM(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
 
         if self.bidirection:

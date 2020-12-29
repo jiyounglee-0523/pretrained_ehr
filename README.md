@@ -20,9 +20,27 @@ pretrained_ehrcode
 
 ## Execution
 ```
-python main.py --args
+python main.py \
+-- bert_induced = True \ 
+--source_file = 'eicu' \ 
+--target = 'readmission' \ 
+--item = 'lab' \ 
+--time_window = '12' \ 
+--rnn_model_type = 'gru' \ 
+--batch_size = ??? \ 
+--embedding_dim = 128 \ 
+--hidden_dim = 128 \ 
+--rnn_bidirection = True \
+--n_epochs = 50 \ 
+--path = '/home/jylee/data/pretrained_ehr/output/' \
+
+* maxmimum batch size is 128, otherwise it will have 'Out of Memory' error.
+
+
+
+
 or
-python run.py   (working on run.py, not recommended)
+python run.py   (currently working on run.py, not recommended)
 ```
 
 
@@ -31,10 +49,16 @@ python run.py   (working on run.py, not recommended)
 
 **v1.1** : bert-induced
 
-​     **v1.2** : v1.1 debuged
+​	v1.2:  v1.1 debuged
+
+**v2.0 **: 
+
+- target = 'dx_depth1_unique'  DONE
+- source_file = 'both'  DONE 
+- bert_freeze  DONE
+- early stopping DONE
 
 
 ## To-Do
-- work on *source_file = Total*
 - work on multiple items
 - work on ordering multiple item datasets
