@@ -51,7 +51,7 @@ python run.py   (currently working on run.py, not recommended)
 
 ​	v1.2:  v1.1 debuged
 
-**v2.0 ** 
+**v2.0** :
 
 - target = 'dx_depth1_unique'  DONE
 - source_file = 'both'  DONE 
