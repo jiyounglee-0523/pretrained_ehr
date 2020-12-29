@@ -34,7 +34,7 @@ python main.py \
 --n_epochs = 50 \ 
 --path = '/home/jylee/data/pretrained_ehr/output/' \
 
-* maxmimum batch size is 128, otherwise it will have 'Out of Memory' error.
+* maxmimum batch size is 128, otherwise it will show 'Out of Memory' error.
 
 
 
@@ -51,7 +51,7 @@ python run.py   (currently working on run.py, not recommended)
 
 ​	v1.2:  v1.1 debuged
 
-**v2.0 **: 
+**v2.0 ** 
 
 - target = 'dx_depth1_unique'  DONE
 - source_file = 'both'  DONE 
