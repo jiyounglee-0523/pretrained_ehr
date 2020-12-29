@@ -12,7 +12,7 @@ To-Do : (max, avg) pooling 어떻게 할지?
 class RNNmodels(nn.Module):
     def __init__(self, args, vocab_size, output_size, device, n_layers = 1, dropout = 0.0):
         super(RNNmodels, self).__init__()
-        self.bidirection = args.rnn_bidirection
+        self.bidirection = bool(args.rnn_bidirection)
         embedding_dim = args.embedding_dim
         self.hidden_dim = args.hidden_dim
         num_directions = 2 if self.bidirection else 1

@@ -17,14 +17,15 @@ class Bert_Trainer():
         self.valid_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='pretrained_ehr')
-        wandb.config.update(args)
+        wandb.init(project='pretrained_ehr', config=args)
+        args = wandb.config
 
         lr = args.lr
         self.n_epochs = args.n_epochs
         path = args.path
         filename = wandb.run.id
-        self.path = path + filename + '.pt'
+        self.best_eval_path = path + filename + '_best_eval.pt'
+        self.final_path = path + filename + '_final.pt'
 
         if args.target == 'dx_depth1_unique':
             output_size = 18
@@ -43,8 +44,8 @@ class Bert_Trainer():
         best_auroc = 0.0
         best_auprc = 0.0
 
-        if os.path.exists(self.path):
-            ckpt = torch.load(self.path)
+        if os.path.exists(self.best_eval_path):
+            ckpt = torch.load(self.best_eval_path)
             self.model.load_state_dict(ckpt['model_state_dict'])
             best_loss = ckpt['loss']
             best_auroc = ckpt['auroc']
@@ -106,7 +107,7 @@ class Bert_Trainer():
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.path)
+                            'auprc': best_auprc}, self.best_eval_path)
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
             print('[Train_{}]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(n_epoch, avg_train_loss,
@@ -117,6 +118,11 @@ class Bert_Trainer():
             self.early_stopping(avg_eval_loss, self.model)
             if self.early_stopping.early_stop:
                 print('Early stopping')
+                torch.save({'model_state_dict': self.model.state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'loss': avg_eval_loss,
+                            'auroc': best_auroc,
+                            'auprc': best_auprc}, self.final_path)
                 break
 
     def evaluation(self):

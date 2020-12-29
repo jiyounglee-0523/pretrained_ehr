@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import roc_auc_score, average_precision_score
 import wandb
+import os
 
 from models.rnn_models import *
 from utils.loss import *
@@ -15,12 +16,15 @@ class Trainer(nn.Module):
         self.eval_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='pretrained_ehr')
-        wandb.config.update(args)
+        wandb.init(project='pretrained_ehr', config=args)
+        args = wandb.config
 
         lr = args.lr
         self.n_epochs = args.n_epochs
-        self.path = './test.pt'      ########## change this!
+        path = args.path
+        filename = wandb.run.id
+        self.best_eval_path = path + filename + '_best_eval.pt'
+        self.final_path = path + filename + '_final.pt'    ########## change this!
 
         if args.source_file == 'mimic':
             vocab_size = 600             ########### change this!   vocab size 잘못됨
@@ -47,6 +51,14 @@ class Trainer(nn.Module):
         best_loss = float('inf')
         best_auroc = 0.0
         best_auprc = 0.0
+
+        if os.path.exists(self.best_eval_path):
+            ckpt = torch.load(self.best_eval_path)
+            self.model.load_state_dict(ckpt['model_state_dict'])
+            best_loss = ckpt['loss']
+            best_auroc = ckpt['auroc']
+            best_auprc = ckpt['auprc']
+
         for n_epoch in range(self.n_epochs + 1):
 
             preds_train = []
@@ -86,7 +98,7 @@ class Trainer(nn.Module):
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.path)
+                            'auprc': best_auprc}, self.best_eval_path)
 
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
@@ -103,6 +115,11 @@ class Trainer(nn.Module):
             self.early_stopping(avg_eval_loss, self.model)
             if self.early_stopping.early_stop:
                 print('Early stopping')
+                torch.save({'model_state_dict': self.model.state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'loss': avg_eval_loss,
+                            'auroc': best_auroc,
+                            'auprc': best_auprc}, self.final_path)
                 break
 
 

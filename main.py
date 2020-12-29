@@ -6,22 +6,22 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--bert_induced', type=bool, default=True)
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='both')
+    parser.add_argument('--bert_induced', action='store_true')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--dropout', type=float, default=0.0)
     parser.add_argument('--embedding_dim', type=int, default=128)
     parser.add_argument('--hidden_dim', type=int, default=128)
-    parser.add_argument('--rnn_bidirection', type=bool, default=True)
+    parser.add_argument('--rnn_bidirection', action='store_true')
     parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
-    parser.add_argument('--bert_freeze', type=bool, default=True)
+    parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='./')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
@@ -31,9 +31,11 @@ def main():
     if args.bert_induced:
         from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
         from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+        print('bert induced')
     else:
         from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
         from trainer.base_trainer import Trainer
+        print('single_rnn')
 
 
 
