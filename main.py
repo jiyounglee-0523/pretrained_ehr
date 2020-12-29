@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', action='store_true')
-    parser.add_argument('--path', type=str, default='./')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
 

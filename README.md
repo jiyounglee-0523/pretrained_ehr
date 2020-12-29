@@ -1,7 +1,7 @@
 ##  Directory Settings
 
 ```
-pretrained_ehrcode
+pretrained_ehr_code
 ├─ dataset
 │  ├─ singlernn_dataloader.py
 │  └─ prebert_dataloader 
@@ -19,7 +19,7 @@ pretrained_ehrcode
 ```
 
 ## Execution
-```
+```ar
 python main.py \
 -- bert_induced = True \ 
 --source_file = 'eicu' \ 
@@ -44,7 +44,71 @@ python run.py   (currently working on run.py, not recommended)
 ```
 
 
+
+## Model Saved Directory
+
+```
+arxiv_output
+├─ bert_induced_False (means single_rnn)
+│  ├─ mimic
+│  │   ├─ readmission
+│  │   ├─ mortality
+│  │   ├─ los_3days
+│  │   ├─ los_7days
+│  │   └─ dx_depth1_unique
+│  └─ eicu 
+│      ├─ readmission
+│      ├─ mortality
+│      ├─ los_3days
+│      ├─ los_7days
+│      └─ dx_depth1_unique
+│
+├─ bert_freeze 
+│  ├─ mimic
+│  │   ├─ readmission
+│  │   ├─ mortality
+│  │   ├─ los_3days
+│  │   ├─ los_7days
+│  │   └─ dx_depth1_unique
+│  ├─ eicu
+│  │   ├─ readmission
+│  │   ├─ mortality
+│  │   ├─ los_3days
+│  │   ├─ los_7days
+│  │   └─ dx_depth1_unique
+│  └─ both
+│      ├─ readmission
+│      ├─ mortality
+│      ├─ los_3days
+│      ├─ los_7days
+│      └─ dx_depth1_unique
+│
+└─ bert_finetune
+   ├─ mimic
+   │   ├─ readmission
+   │   ├─ mortality
+   │   ├─ los_3days
+   │   ├─ los_7days
+   │   └─ dx_depth1_unique
+   ├─ eicu
+   │   ├─ readmission
+   │   ├─ mortality
+   │   ├─ los_3days
+   │   ├─ los_7days
+   │   └─ dx_depth1_unique
+   └─ both
+       ├─ readmission
+       ├─ mortality
+       ├─ los_3days
+       ├─ los_7days
+       └─ dx_depth1_unique
+   
+```
+
+
+
 ## Updates
+
 **v1.0** : Initial commit
 
 **v1.1** : bert-induced
@@ -57,6 +121,8 @@ python run.py   (currently working on run.py, not recommended)
 - source_file = 'both'  DONE 
 - bert_freeze  DONE
 - early stopping DONE
+
+v2.1 : path saved, argparser debug
 
 
 ## To-Do

@@ -21,10 +21,19 @@ class Trainer(nn.Module):
 
         lr = args.lr
         self.n_epochs = args.n_epochs
-        path = args.path
-        filename = wandb.run.id
-        self.best_eval_path = path + filename + '_best_eval.pt'
-        self.final_path = path + filename + '_final.pt'    ########## change this!
+
+        file_target_name = args.target
+        if file_target_name == 'los>3day':
+            file_target_name = 'los_3day'
+        elif file_target_name == 'los>7day':
+            file_target_name = 'los_7day'
+
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr)
+        path = os.path.join(args.path, 'bert_induced_False', args.source_file, file_target_name, filename)
+        print('Model will be saved in {}'.format(path))
+
+        self.best_eval_path = path + '_best_eval.pt'
+        self.final_path = path + '_final.pt'    ########## change this!
 
         if args.source_file == 'mimic':
             vocab_size = 600             ########### change this!   vocab size 잘못됨

@@ -33,7 +33,7 @@ class post_RNN(nn.Module):
         if bert_model == 'clinical_bert':
             self.prebert = ClinicalBERT(args.word_max_length)
 
-        if args.bert_freeze:
+        if args.bert_freeze == True:
             for param in self.prebert.parameters():
                 param.requires_grad = False
 
@@ -43,6 +43,7 @@ class post_RNN(nn.Module):
 
         self.max_length = int(args.max_length)
         dropout = args.dropout
+        self.freeze = args.bert_freeze
 
         self.bidirection = args.rnn_bidirection
         num_directions = 2 if self.bidirection else 1
@@ -62,17 +63,17 @@ class post_RNN(nn.Module):
 
     def forward(self, x, lengths):
         # goes through prebert
-        x = self.prebert(x)
 
-        # with torch.no_grad():
-        #     x = self.prebert(x)
+        if self.freeze:
+            with torch.no_grad():
+                x = self.prebert(x)
+                x = x.detach()
+        else:
+            x = self.prebert(x)
 
         x = x.reshape(-1, 150, 768)     # hard coding!
         lengths = lengths.squeeze().long()
         B = x.size(0)
-
-        # if self.freeze:    # freeze the output
-        #     x = x.detach()
 
         x = self.embed_fc(x)    # B, S, embedding_dim
         packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
