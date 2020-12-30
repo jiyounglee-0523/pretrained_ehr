@@ -150,6 +150,7 @@ class Bert_Trainer():
             for iter, sample in enumerate(self.valid_dataloader):
                 item_name, item_target, seq_len = sample
                 item_target = item_target.to(self.device)
+                item_name = item_name.to(self.device)
 
                 y_pred = self.model(item_name, seq_len)
                 loss = self.criterion(y_pred, item_target.float().to(self.device))
