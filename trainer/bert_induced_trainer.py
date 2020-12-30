@@ -11,14 +11,13 @@ from utils.trainer_utils import *
 
 class Bert_Trainer():
     def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
-        super().__init__()
 
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
         self.device = device
         self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', config=args)
+        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args)
         args = wandb.config
 
         lr = args.lr
@@ -30,7 +29,7 @@ class Bert_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr)
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
         if args.bert_freeze == True:
             path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
         elif args.bert_freeze == False:
@@ -99,14 +98,14 @@ class Bert_Trainer():
                 probs_train = torch.sigmoid(y_pred).detach().cpu().numpy()
                 preds_train += list(probs_train.flatten())
                 truths_train += list(item_target.detach().cpu().numpy().flatten())
-                wandb.log({'train_loss': loss})
+                #wandb.log({'train_loss': loss})
 
             auroc_train = roc_auc_score(truths_train, preds_train)
             auprc_train = average_precision_score(truths_train, preds_train)
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
-            wandb.log({'avg_train_loss': avg_train_loss,
+            wandb.log({'train_loss': avg_train_loss,
                        'train_auroc': auroc_train,
                        'train_auprc': auprc_train,
                        'eval_loss': avg_eval_loss,
@@ -129,7 +128,7 @@ class Bert_Trainer():
             print('[Valid_{}]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(n_epoch, avg_eval_loss,
                                                                                             auroc_eval, auprc_eval))
 
-            self.early_stopping(avg_eval_loss, self.model)
+            self.early_stopping(avg_eval_loss)
             if self.early_stopping.early_stop:
                 print('Early stopping')
                 torch.save({'model_state_dict': self.model.state_dict(),

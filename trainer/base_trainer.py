@@ -3,6 +3,7 @@ import torch.nn as nn
 from sklearn.metrics import roc_auc_score, average_precision_score
 import wandb
 import os
+import tqdm
 
 from models.rnn_models import *
 from utils.loss import *
@@ -17,7 +18,7 @@ class Trainer(nn.Module):
         self.device = device
         self.valid_index = '_fold'+str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', config=args)
+        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args)
         args = wandb.config
 
         lr = args.lr
@@ -29,7 +30,7 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr)
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
         path = os.path.join(args.path, 'bert_induced_False', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
@@ -54,7 +55,8 @@ class Trainer(nn.Module):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
         self.early_stopping = EarlyStopping(patience=7, verbose=True)
-
+        num_params = count_parameters(self.model)
+        print('Number of parameters: {}'.format(num_params))
 
 
     def train(self):
@@ -75,13 +77,13 @@ class Trainer(nn.Module):
             truths_train = []
             avg_train_loss = 0.
 
-            for iter, sample in enumerate(self.dataloader):
+            for iter, sample in tqdm.tqdm(enumerate(self.dataloader)):
                 self.model.train()
                 self.optimizer.zero_grad(set_to_none=True)
 
                 item_id, item_offset, item_offset_order, lengths, target = sample
-                item_id.to(self.device) ; item_offset.to(self.device) ; item_offset_order.to(self.device)
-                lengths.to(self.device) ; target.to(self.device)
+                item_id = item_id.to(self.device)
+                target = target.to(self.device)
 
                 y_pred = self.model(item_id, lengths)
                 loss = self.criterion(y_pred, target.float().to(self.device))
@@ -104,6 +106,7 @@ class Trainer(nn.Module):
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
+
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
@@ -122,7 +125,7 @@ class Trainer(nn.Module):
             print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
-            self.early_stopping(avg_eval_loss, self.model)
+            self.early_stopping(avg_eval_loss)
             if self.early_stopping.early_stop:
                 print('Early stopping')
                 torch.save({'model_state_dict': self.model.state_dict(),

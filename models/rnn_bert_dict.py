@@ -3,12 +3,13 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class dict_post_RNN(nn.Module):
-    def __init__(self, args, output_size, n_layers=1):
+    def __init__(self, args, output_size, device, n_layers=1):
         super().__init__()
         dropout = args.dropout
         self.bidirection = args.rnn_bidirection
         num_directions = 2 if self.bidirection else 1
         self.hidden_dim = args.hidden_dim
+        self.device = device
 
         self.embed_fc = nn.Linear(768, args.embedding_dim)    # hard_coding
 
@@ -26,7 +27,7 @@ class dict_post_RNN(nn.Module):
         B = x.size(0)
         lengths = lengths.squeeze().long()
 
-        x = self.embed_fc(x)
+        x = self.embed_fc(x).to(self.device)
         packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         output, hidden = self.model(packed)
         output_seq, output_len = pad_packed_sequence(output, batch_first=True)

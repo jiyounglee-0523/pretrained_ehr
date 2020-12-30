@@ -25,12 +25,13 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', action='store_true')
-    parser.add_argument('--path', type=str, default='/home/ghhur/github/output/arxiv_output/')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
     if args.bert_induced:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
@@ -71,9 +72,9 @@ def main():
         print('Test start_{}_{}_{}_bert_induced_{}_dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(
             args.source_file, args.item, args.target, args.bert_induced,args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr))
 
-            test_loader = get_dataloader(args=args, validation_index=0, data_type='test')
-            tester = Tester(args, test_loader, device)
-            tester.test()
+        test_loader = get_dataloader(args=args, validation_index=0, data_type='test')
+        tester = Tester(args, test_loader, device)
+        tester.test()
 
         print('Finished test!')
 
