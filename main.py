@@ -29,11 +29,9 @@ def main():
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    args.bert_induced = True
-    args.bert_freeze = True
 
     if args.bert_induced:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
