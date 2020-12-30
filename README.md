@@ -124,6 +124,8 @@ arxiv_output
 
 v2.1 : path saved, argparser debug
 
+v2.2 : bert embedding from dictionary (takes too long for training)
+
 
 ## To-Do
 - work on multiple items

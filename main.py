@@ -3,6 +3,7 @@ import torch
 import random
 import numpy as np
 import argparse
+import os
 
 def main():
     parser = argparse.ArgumentParser()
@@ -26,11 +27,12 @@ def main():
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     args = parser.parse_args()
 
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     if args.bert_induced:
-        from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
-        from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+        from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
+        from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
         print('bert induced')
     else:
         from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
@@ -57,7 +59,7 @@ def main():
         train_loader = get_dataloader(args=args, validation_index=valid_index, data_type='train')
         valid_loader = get_dataloader(args=args, validation_index=valid_index, data_type='eval')
 
-        trainer = Trainer(args, train_loader, valid_loader, device)
+        trainer = Trainer(args, train_loader, valid_loader, device, valid_index)
         trainer.train()
 
         print('Finished training valid_index: {}'.format(valid_index))

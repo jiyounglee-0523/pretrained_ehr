@@ -9,14 +9,15 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class Trainer(nn.Module):
-    def __init__(self, args, train_dataloader, valid_dataloader, device):
+    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
         super().__init__()
 
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
         self.device = device
+        self.valid_index = '_fold'+str(valid_index)
 
-        wandb.init(project='pretrained_ehr', config=args)
+        wandb.init(project='pretrained_ehr_team', config=args)
         args = wandb.config
 
         lr = args.lr
@@ -32,8 +33,8 @@ class Trainer(nn.Module):
         path = os.path.join(args.path, 'bert_induced_False', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
-        self.best_eval_path = path + '_best_eval.pt'
-        self.final_path = path + '_final.pt'    ########## change this!
+        self.best_eval_path = path + self.valid_index +'_best_eval.pt'
+        self.final_path = path + self.valid_index + '_final.pt'
 
         if args.source_file == 'mimic':
             vocab_size = 600             ########### change this!   vocab size 잘못됨

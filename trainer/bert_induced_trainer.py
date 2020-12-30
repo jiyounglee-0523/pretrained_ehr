@@ -10,14 +10,15 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class Bert_Trainer():
-    def __init__(self, args, train_dataloader, valid_dataloader, device):
+    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
         super().__init__()
 
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
         self.device = device
+        self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr', config=args)
+        wandb.init(project='pretrained_ehr_team', config=args)
         args = wandb.config
 
         lr = args.lr
@@ -36,8 +37,8 @@ class Bert_Trainer():
             path = os.path.join(args.path, 'bert_finetune', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
-        self.best_eval_path = path + '_best_eval.pt'
-        self.final_path = path + '_final.pt'
+        self.best_eval_path = path + self.valid_index +'_best_eval.pt'
+        self.final_path = path + self.valid_index +'_final.pt'
 
         if args.target == 'dx_depth1_unique':
             output_size = 18
@@ -73,6 +74,7 @@ class Bert_Trainer():
                 self.optimizer.zero_grad(set_to_none=True)
 
                 item_name, item_target, seq_len = sample
+                item_name = item_name.to(self.device)
                 item_target = item_target.to(self.device)
                 # print('DataLoader Done!')
                 # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
