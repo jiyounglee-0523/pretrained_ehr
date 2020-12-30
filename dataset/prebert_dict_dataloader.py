@@ -19,6 +19,10 @@ def bertinduced_dict_get_dataloader(args, validation_index, data_type='train'):
         eval_data = bert_dict_dataset(args, validation_index, data_type)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
+    elif data_type == 'test':
+        test_data = bert_dict_dataset(args, 0, data_type)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+
     return dataloader
 
 

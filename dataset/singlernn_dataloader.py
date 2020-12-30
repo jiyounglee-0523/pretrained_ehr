@@ -17,6 +17,10 @@ def singlernn_get_dataloader(args, validation_index, data_type = 'train'):
         eval_data = eicu_dataset(args, validation_index, data_type)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
+    elif data_type == 'test':
+        test_data =  eicu_dataset(args, 0, data_type)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+
     return dataloader
 
 
@@ -84,12 +88,15 @@ class eicu_dataset(Dataset):
 
         # extract cohort
         cohort = cohort[['ID', id_window, offset_window, offset_order_window, target, target_fold]]
-        cohort = cohort[cohort[target_fold] != 0]   # 0 is for test dataset
+           # 0 is for test dataset
 
         if data_type == 'train':
+            cohort = cohort[cohort[target_fold] != 0]
             cohort = cohort[cohort[target_fold] != validation_index]
         elif data_type == 'eval':
             cohort = cohort[cohort[target_fold] == validation_index]
+        elif data_type == 'test':
+            cohort = cohort[cohort[target_fold] == 0]
 
         # pad
         item_id = cohort[id_window].apply(lambda x: torch.Tensor(x)).values.tolist()
