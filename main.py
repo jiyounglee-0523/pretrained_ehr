@@ -30,6 +30,9 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+    args.bert_induced = True
+    args.bert_freeze = True
+
     if args.bert_induced:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
         from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer

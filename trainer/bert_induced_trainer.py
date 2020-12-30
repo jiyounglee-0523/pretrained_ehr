@@ -18,7 +18,7 @@ class Bert_Trainer():
         self.device = device
         self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', config=args)
+        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args)
         args = wandb.config
 
         lr = args.lr
@@ -30,7 +30,7 @@ class Bert_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr)
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
         if args.bert_freeze == True:
             path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
         elif args.bert_freeze == False:
@@ -150,6 +150,7 @@ class Bert_Trainer():
             for iter, sample in enumerate(self.valid_dataloader):
                 item_name, item_target, seq_len = sample
                 item_target = item_target.to(self.device)
+                item_name = item_name.to(self.device)
 
                 y_pred = self.model(item_name, seq_len)
                 loss = self.criterion(y_pred, item_target.float().to(self.device))

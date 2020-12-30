@@ -17,7 +17,7 @@ class Trainer(nn.Module):
         self.device = device
         self.valid_index = '_fold'+str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', config=args)
+        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args)
         args = wandb.config
 
         lr = args.lr
@@ -29,7 +29,7 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr)
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
         path = os.path.join(args.path, 'bert_induced_False', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
@@ -104,6 +104,7 @@ class Trainer(nn.Module):
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
+
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,

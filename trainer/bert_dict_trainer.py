@@ -7,9 +7,8 @@ import os
 from models.rnn_bert_dict import dict_post_RNN
 from utils.loss import *
 from utils.trainer_utils import *
-from trainer.bert_induced_trainer import Bert_Trainer
 
-class bert_dict_Trainer(Bert_Trainer):
+class bert_dict_Trainer():
     def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
         super(bert_dict_Trainer, self).__init__(args, train_dataloader, valid_dataloader, device, valid_index)
 
@@ -21,3 +20,4 @@ class bert_dict_Trainer(Bert_Trainer):
             self.criterion = FocalLoss()
 
         self.model = dict_post_RNN(args, output_size).to(self.device)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
