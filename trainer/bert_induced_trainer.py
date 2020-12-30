@@ -11,7 +11,6 @@ from utils.trainer_utils import *
 
 class Bert_Trainer():
     def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
-        super().__init__()
 
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
@@ -99,14 +98,14 @@ class Bert_Trainer():
                 probs_train = torch.sigmoid(y_pred).detach().cpu().numpy()
                 preds_train += list(probs_train.flatten())
                 truths_train += list(item_target.detach().cpu().numpy().flatten())
-                wandb.log({'train_loss': loss})
+                #wandb.log({'train_loss': loss})
 
             auroc_train = roc_auc_score(truths_train, preds_train)
             auprc_train = average_precision_score(truths_train, preds_train)
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
-            wandb.log({'avg_train_loss': avg_train_loss,
+            wandb.log({'train_loss': avg_train_loss,
                        'train_auroc': auroc_train,
                        'train_auprc': auprc_train,
                        'eval_loss': avg_eval_loss,
@@ -129,7 +128,7 @@ class Bert_Trainer():
             print('[Valid_{}]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(n_epoch, avg_eval_loss,
                                                                                             auroc_eval, auprc_eval))
 
-            self.early_stopping(avg_eval_loss, self.model)
+            self.early_stopping(avg_eval_loss)
             if self.early_stopping.early_stop:
                 print('Early stopping')
                 torch.save({'model_state_dict': self.model.state_dict(),
