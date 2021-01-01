@@ -13,15 +13,15 @@ from dataset.prebert_dataloader import healthcare_dataset
 def bertinduced_dict_get_dataloader(args, validation_index, data_type='train'):
     if data_type == 'train':
         train_data = bert_dict_dataset(args, validation_index, data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'eval':
         eval_data = bert_dict_dataset(args, validation_index, data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'test':
         test_data = bert_dict_dataset(args, 0, data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=32)
 
     return dataloader
 
@@ -54,15 +54,16 @@ class bert_dict_dataset(healthcare_dataset):
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
-        for name in single_item_name:
-            name = re.sub(r'[.,/|!-?"\':;~()\[\]]', '', name)
-            single_embedding = self.word2embed[name]
-            embedding.append(single_embedding)
 
-        embedding = torch.Tensor(np.stack(embedding, axis=0))    # shape of (seq_len, 768)
-        # padding
+        single_item_name = [re.sub(r'[.,/|!-?"\':;~()\[\]]', '', i) for i in single_item_name]
+
+        def embed_dict(x):
+            return self.word2embed[x]
+        embedding = list(map(embed_dict, single_item_name))     # list with length seq_len
+        embedding = torch.Tensor(np.stack(embedding, axis=0))   # tensor of shape (seq_len, 768)
+
         padding = torch.zeros(int(self.max_length) - embedding.size(0), embedding.size(1))
-        embedding = torch.cat((embedding, padding), dim=0)    # shape of (max_length, 768)
+        embedding = torch.cat((embedding, padding), dim=0)
         assert list(embedding.shape)[0] == int(self.max_length), "padding wrong!"
 
         single_target = self.item_target[item]
