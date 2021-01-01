@@ -10,27 +10,34 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', choices=['train', 'test'],type=str, default='train')
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--dropout', type=float, default=0.0)
-    parser.add_argument('--embedding_dim', type=int, default=128)
-    parser.add_argument('--hidden_dim', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--embedding_dim', type=int, default=768)
+    parser.add_argument('--hidden_dim', type=int, default=512)
     parser.add_argument('--rnn_bidirection', action='store_true')
     parser.add_argument('--n_epochs', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
+    parser.add_argument('--device_number', type=int)
     args = parser.parse_args()
 
-
+    # args.device_number = 6
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
+    # # debug
+    # args.bert_induced = True
+    # args.bert_freeze = True
 
 
     if args.bert_induced:
@@ -67,6 +74,7 @@ def main():
             trainer.train()
 
             print('Finished training valid_index: {}'.format(valid_index))
+            break
 
     elif args.mode == 'test':
         print('Test start_{}_{}_{}_bert_induced_{}_dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(

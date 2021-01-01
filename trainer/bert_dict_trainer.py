@@ -29,10 +29,9 @@ class bert_dict_Trainer():
             file_target_name = 'los_7day'
 
         filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batchsize{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
-        if args.bert_freeze == True:
-            path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
-        elif args.bert_freeze == False:
-            path = os.path.join(args.path, 'bert_finetune', args.source_file, file_target_name, filename)
+
+        path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
+
         print('Model will be saved in {}'.format(path))
 
         self.best_eval_path = path + self.valid_index + '_best_eval.pt'
