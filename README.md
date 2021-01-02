@@ -127,6 +127,13 @@ v2.1 : path saved, argparser debug
 v2.2 : bert embedding from dictionary (takes too long for training)
 
 
+
+**v3.0**: test.py (few_shot, zero_shot, interchange)
+
+
 ## To-Do
 - work on multiple items
 - work on ordering multiple item datasets
+- [Dataset] check if lengths of padded *item_id* and *item_offset_order* are the same.
+
+- change wandb init (reinint=True)    for seed 

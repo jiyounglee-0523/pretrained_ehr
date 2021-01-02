@@ -1,46 +1,180 @@
-import os
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
-import wandb
 from sklearn.metrics import roc_auc_score, average_precision_score
+
+import os
+import argparse
+import pickle
+import random
+import wandb
+import tqdm
+import re
 
 from models.rnn_bert_dict import *
 from models.rnn_models import *
+from models.prebert import *
 from utils.loss import *
 from utils.trainer_utils import *
 
+"""
+few-shot: 0.0(zero-shot), 0.3, 0.5, 0.8, 1.0(full-shot = transfer learning)
+"""
+
+
+def get_test_dataloader(args, data_type='train'):       # validation? test?
+    if data_type == 'train':
+        train_data = Few_Shot_Dataset(args, data_type=data_type)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
+
+    elif data_type == 'eval':
+        eval_data = Few_Shot_Dataset(args, data_type=data_type)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
+
+    elif data_type == 'test':
+        test_data = Few_Shot_Dataset(args, data_type=data_type)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+
+    return dataloader
+
+
+class Few_Shot_Dataset(Dataset):
+    def __init__(self, args, data_type):
+        test_file = args.test_file
+        self.target = args.target
+        item = args.item
+        self.max_length = args.max_length
+        time_window = args.time_window
+        self.word_max_length = args.word_max_length
+        self.bert_induced = args.bert_induced
+
+        if test_file == 'both':
+            raise NotImplementedError
+
+        else:
+            few_shot = args.few_shot
+            if few_shot == 0.0 or 1.0:
+                path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
+                                                                                                 item, self.max_length,
+                                                                                                 args.seed)
+            else:
+                path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100))
+            data = pickle.load(open(path, 'rb'))
+
+            # change column name
+            if test_file == 'mimic':
+                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+
+            elif test_file == 'eicu':
+                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            self.item_name, self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_word2embed.pkl'.format(test_file, item))
+            self.word2embed = pickle.load(open(vocab_path, 'rb'))
+
+    def __len__(self):
+        return self.item_id.size(0)
+
+    def __getitem__(self, item):
+        # RNN
+        single_item_id = self.item_id[item]
+        single_item_offset = self.item_offset[item]
+        single_item_offset_order = self.item_offset_order[item]
+        single_target = self.item_target[item]
+        single_length = torch.LongTensor([torch.max(torch.nonzero(single_item_id.data)) + 1])
+
+        if self.target == 'dx_depth1_unique':
+            single_target = [int(j) for j in single_target]
+            target_list = torch.Tensor(single_target).long()
+
+            single_target = torch.zeros(18)
+            single_target[target_list - 1] = 1   # shape of 18
+
+        # bert_induced
+        single_item_name = self.item_name[item]
+        seq_len = torch.Tensor([len(single_item_name)])
+
+        single_item_name = [re.sub(r'[.,/|!-?"\':;~()\[\]]', '', i) for i in single_item_name]
+
+        def embed_dict(x):
+            return self.word2embed[x]
+        embedding = list(map(embed_dict, single_item_name))  # list with length seq_len
+        embedding = torch.Tensor(np.stack(embedding, axis=0))  # tensor of shape (seq_len, 768)
+
+        padding = torch.zeros(int(self.max_length) - embedding.size(0), embedding.size(1))
+        embedding = torch.cat((embedding, padding), dim=0)
+
+        if not self.bert_induced:
+            return single_item_id, single_target, single_length
+        elif self.bert_induced:
+            return embedding, single_target, seq_len
+
+
+    def preprocess(self, cohort, data_type, item, time_window, target):
+        if time_window == 'Total':
+            raise NotImplementedError
+        else:
+            name_window = '{}_name_{}hr'.format(item, time_window)
+            offset_window = 'order_offset_{}hr'.format(time_window)
+            offset_order_window = '{}_offset_order_{}hr'.format(item, time_window)
+            id_window = '{}_id_{}hr'.format(item, time_window)
+            target_fold = '{}_fold'.format(target)
+            if target == 'dx_depth1_unique':
+                target_fold = 'dx_fold'
+
+        # extract cohort
+        cohort = cohort[['ID', name_window, offset_window, offset_order_window, id_window, target, target_fold]]
+        cohort = cohort[cohort[target_fold] != -1]   # -1 is for unsampled
+
+        if data_type == 'train':
+            cohort = cohort[cohort[target_fold] == 1]
+
+        elif data_type == 'eval':
+            cohort = cohort[cohort[target_fold] == 2]
+
+        elif data_type == 'test':
+            cohort = cohort[cohort[target_fold] == 0]
+
+        # pad
+        item_name = cohort[name_window].values.tolist()
+
+        item_id = cohort[id_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_id = pad_sequence(item_id, batch_first=True)
+
+        item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_offset_order = pad_sequence(item_offset_order, batch_first=True)
+
+        item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_offset = pad_sequence(item_offset, batch_first=True)
+
+        # target
+        if target == 'dx_depth1_unique':
+            item_target = cohort[target].values.tolist()
+
+        else:
+            item_target = torch.LongTensor(cohort[target].values.tolist()) # shape of (B)
+
+        return item_name, item_id, item_offset, item_offset_order, item_target
+
+
+################################################################################
+
 
 class Tester(nn.Module):
-    def __init__(self, args, test_dataloader, device):
+    def __init__(self, args, train_dataloader, valid_dataloader, test_dataloader, device, seed):
         super().__init__()
-
-        self.dataloader = test_dataloader
+        self.train_dataloader = train_dataloader
+        self.valid_dataloader = valid_dataloader
+        self.test_dataloader = test_dataloader
         self.device = device
-        wandb.init(project='pretrained_ehr_team', config=args)
-        args = wandb.config
 
-        file_target_name = args.target
-        if file_target_name == 'los>3day':
-            file_target_name = 'los_3day'
-        elif file_target_name == 'los>7day':
-            file_target_name = 'los_7day'
+        wandb.init(project='test', entity='pretrained_ehr', config=args, reinit=True)
 
-        if args.bert_induced:
-            self.bert_induced = 'bert_induced_True'
-        else:
-            self.bert_induced = 'bert_induced_False'
-
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}'.format(args.dropout, args.embedding_dim, args.hidden_dim,
-                                                                  args.rnn_bidirection, args.lr)
-        print(os.path.join(args.path, self.bert_induced, args.source_file, file_target_name))
-        self.path = os.path.join(args.path, self.bert_induced, args.source_file, file_target_name, filename)
-        print('Model is loadded from {}'.format(self.path))
-
-        if args.source_file == 'mimic':
-            vocab_size = 600  ########### change this!   vocab size 잘못됨
-        elif args.source_file == 'eicu':
-            vocab_size = 150
-        else:
-            raise NotImplementedError
+        lr = args.lr
+        self.n_epochs = args.n_epochs
 
         if args.target == 'dx_depth1_unique':
             output_size = 18
@@ -49,67 +183,244 @@ class Tester(nn.Module):
             output_size = 1
             self.criterion = FocalLoss()
 
-        if args.bert_induced == True:
-            self.model = dict_post_RNN(args=args, output_size=output_size).to(self.device)
+        file_target_name = args.target
+        if file_target_name == 'los>3day':
+            file_target_name = 'los_3day'
+        elif file_target_name == 'los>7day':
+            file_target_name = 'los_7day'
+
+        if args.source_file == 'mimic':
+            vocab_size = 600  ########### change this!   vocab size 잘못됨
+        elif args.source_file == 'eicu':
+            vocab_size = 150
         else:
-            self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
+            raise NotImplementedError
+
+        if args.bert_induced and args.bert_freeze:
+            model_directory = 'bert_freeze'
+            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
+            print('bert freeze')
+        elif args.bert_induced and not args.bert_freeze:
+            model_directory = 'bert_finetune'
+            self.model = post_RNN(args=args, output_size=output_size).to(device)
+            print('bert finetuning')
+        elif not args.bert_induced:
+            model_directory = 'bert_induced_False'
+            self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
+            print('single rnn')
+
+        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}_fold1'.format(args.dropout, args.embedding_dim, args.hidden_dim,       #### change the filename,  NO FOLD NAME!!!
+                                                                  args.rnn_bidirection, args.lr, args.batch_size)
+
+        self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
+        print('Load Model from {}'.format(self.source_path))
+
+        target_filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}_fewshot{}_seed{}'.format(args.dropout, args.embedding_dim, args.hidden_dim,
+                                                                                                       args.rnn_bidirection, lr, args.batch_size, args.few_shot, seed)
+        target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
+        self.best_target_path = target_path + '_best_eval.pt'
+        self.final_path = target_path + '_final.pt'
+
+
+        # load parameters
+        best_eval_path = self.source_path + '_best_eval.pt'
+        ckpt = torch.load(best_eval_path)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        print("Model successfully loaded!")
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.early_stopping = EarlyStopping(patience=7, verbose=True)
+        num_params = count_parameters(self.model)
+        print('Number of parameters: {}'.format(num_params))
+
+    def train(self):
+        best_loss = float('inf')
+        best_auroc = 0.0
+        best_auprc = 0.0
+
+        for n_epoch in range(self.n_epochs + 1):
+            preds_train = []
+            truths_train = []
+            avg_train_loss = 0.
+
+            for iter, sample in tqdm.tqdm(enumerate(self.train_dataloader)):
+                self.model.train()
+                self.optimizer.zero_grad(set_to_none=True)
+
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+
+                loss.backward()
+                self.optimizer.step()
+
+                avg_train_loss += loss.item() / len(self.train_dataloader)
+
+                probs_train = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_train += list(probs_train.flatten())
+                truths_train += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_train = roc_auc_score(truths_train, preds_train)
+            auprc_train = average_precision_score(truths_train, preds_train)
+
+            avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
+
+            if best_loss > avg_eval_loss:
+                best_loss = avg_eval_loss
+                best_auroc = auroc_eval
+                best_auprc = auprc_eval
+
+                torch.save({'model_state_dict': self.model.state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'loss': avg_eval_loss,
+                            'auroc': best_auroc,
+                            'auprc': best_auprc}, self.best_target_path)
+
+                print('Model parameter saved at epoch {}'.format(n_epoch))
+
+            wandb.log({'train_loss': avg_train_loss,
+                       'train_auroc': auroc_train,
+                       'train_auprc': auprc_train,
+                       'eval_loss': avg_eval_loss,
+                       'eval_auroc': auroc_eval,
+                       'eval_auprc': auprc_eval})
+
+            print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train,
+                                                                                         auprc_train))
+            print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval,
+                                                                                         auprc_eval))
+
+            self.early_stopping(avg_eval_loss)
+            if self.early_stopping.early_stop:
+                print('Early stopping')
+                torch.save({'model_state_dict': self.model.state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'loss': avg_eval_loss,
+                            'auroc': best_auroc,
+                            'auprc': best_auprc}, self.final_path)
+
+                break
+
+    def evaluation(self):
+        self.model.eval()
+
+        preds_eval = []
+        truths_eval = []
+        avg_eval_loss = 0.
+
+        with torch.no_grad():
+            for iter, sample in enumerate(self.valid_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_eval_loss += loss.item() / len(self.valid_dataloader)
+
+                probs_eval = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_eval += list(probs_eval.flatten())
+                truths_eval += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_eval = roc_auc_score(truths_eval, preds_eval)
+            auprc_eval = average_precision_score(truths_eval, preds_eval)
+
+        return avg_eval_loss, auroc_eval, auprc_eval
+
+
 
     def test(self):
-        preds_test_list=[]
-        for valid_index in range(5):
-            valid_index += 1
-            print('{}_fold test start'.format(valid_index))
-            self.valid_index = '_fold' + str(valid_index)
-            self.best_eval_path = self.path + self.valid_index + '_best_eval.pt'
-            self.final_path = self.path + self.valid_index + '_final.pt'
+        self.model.eval()
 
-            self.model.eval()
+        preds_test = []
+        truths_test = []
+        avg_test_loss = 0.
 
-            if os.path.exists(self.best_eval_path):
-                ckpt = torch.load(self.best_eval_path)
-                self.model.load_state_dict(ckpt['model_state_dict'])
-                best_loss = ckpt['loss']
-                best_auroc = ckpt['auroc']
-                best_auprc = ckpt['auprc']
-            else:
-                raise NotImplementedError
+        with torch.no_grad():
+            for iter, sample in enumerate(self.test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
 
-            preds_test = []
-            truths_test = []
-            avg_test_loss = 0.
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.test_dataloader)
 
-            with torch.no_grad():
-                for iter, sample in enumerate(self.dataloader):
-                    item_id, item_offset, item_offset_order, lengths, target = sample
-                    item_id.to(self.device)
-                    item_offset.to(self.device)
-                    item_offset_order.to(self.device)
-                    lengths.to(self.device)
-                    target.to(self.device)
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
 
-                    y_pred = self.model(item_id, lengths)
-                    loss = self.criterion(y_pred, target.float().to(self.device))
-                    avg_test_loss += loss.item() / len(self.dataloader)
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test)
 
-                    probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
-                    preds_test += list(probs_test.flatten())
-                    truths_test += list(target.detach().cpu().numpy().flatten())
+            wandb.log({'test_loss': avg_test_loss,
+                       'test_auroc': auroc_test,
+                       'test_auprc': auprc_test})
 
-                auroc_test = roc_auc_score(truths_test, preds_test)
-                auprc_test = average_precision_score(truths_test, preds_test)
-                preds_test_list.append(preds_test)
+            print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
+                                                                                     auprc_test))
 
-                wandb.log({'test_loss': avg_test_loss,
-                           'test_auroc': auroc_test,
-                           'test_auprc': auprc_test})
+        return avg_test_loss, auroc_test, auprc_test
 
-                print('[test_{}_fold]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(valid_index,avg_test_loss, auroc_test,
-                                                                                            auprc_test))
-                print('[best_valid_{}_fold]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(valid_index,best_loss, best_auroc,
-                                                                                                     best_auprc))
-        preds_avg = np.mean(np.array(preds_test_list), axis=0)
-        auroc_test_avg = roc_auc_score(truths_test, preds_avg)
-        auprc_test_avg = average_precision_score(truths_test, preds_avg)
 
-        print('[test_avg]    auroc: {:.3f},     auprc:   {:.3f}'.format(auroc_test_avg, auprc_test_avg))
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--bert_induced', action='store_true')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
+    parser.add_argument('--few_shot', type=float, choices=[0.0, 0.3, 0.5, 0.8, 1.0], default=0.0)
+    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
+    parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
+    parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
+    parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
+    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--embedding_dim', type=int, default=768)
+    parser.add_argument('--hidden_dim', type=int, default=512)
+    parser.add_argument('--rnn_bidirection', action='store_true')
+    parser.add_argument('--n_epochs', type=int, default=50)
+    parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--max_length', type=str, default='150')
+    parser.add_argument('--bert_model', type=str, default='clinical_bert')
+    parser.add_argument('--bert_freeze', action='store_true')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
+    parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
+    parser.add_argument('--device_number', type=int, default=6)
+    args = parser.parse_args()
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if args.source_file == args.test_file:
+        assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"
+
+    SEED = [2020, 2021, 2022, 2023, 2024]
+    for seed in SEED:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
+
+        args.seed = seed
+
+        train_loader = get_test_dataloader(args=args, data_type='train')
+        valid_loader = get_test_dataloader(args=args, data_type='eval')
+        test_loader = get_test_dataloader(args=args, data_type='test')
+
+        tester = Tester(args, train_loader, valid_loader, test_loader, device, seed)
+
+        if args.few_shot == 0.0:
+            print('Only test')
+            tester.test()
+        else:
+            print('Train then test')
+            tester.train()
+            tester.test()
+
+if __name__ == '__main__':
+    main()
 

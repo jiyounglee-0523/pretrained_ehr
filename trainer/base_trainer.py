@@ -163,7 +163,7 @@ class Trainer(nn.Module):
             auroc_eval = roc_auc_score(truths_eval, preds_eval)
             auprc_eval = average_precision_score(truths_eval, preds_eval)
 
-            return avg_eval_loss, auroc_eval, auprc_eval
+        return avg_eval_loss, auroc_eval, auprc_eval
 
 
 
