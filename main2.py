@@ -55,24 +55,23 @@ def main():
         assert args.max_length == '200', "time_window of 24 should have max length of 200!"
 
 
-    SEED = 1234
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed(SEED)
-    torch.backends.cudnn.deterministic = True
+    SEED = [2020, 2021, 2022, 2023, 2024]
+    for seed in SEED:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
 
-
-    for valid_index in range(5):
-        valid_index += 1
+        # change the train_loader, valid_loader (Dataset)   valid_index should be changed!
         train_loader = get_dataloader(args=args, validation_index=valid_index, data_type='train')
         valid_loader = get_dataloader(args=args, validation_index=valid_index, data_type='eval')
 
         trainer = Trainer(args, train_loader, valid_loader, device, valid_index)
         trainer.train()
 
-        print('Finished training valid_index: {}'.format(valid_index))
-        break
+        print('Finished training seed: {}'.format(seed))
+
 
 if __name__ == '__main__':
     main()
