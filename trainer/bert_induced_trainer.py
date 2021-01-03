@@ -17,7 +17,7 @@ class Bert_Trainer():
         self.device = device
         self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args)
+        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
         args = wandb.config
 
         lr = args.lr
