@@ -6,7 +6,7 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'test.py'
 
-few_shot_list = [0.3, 0.5, 0.7, 0.9]
+few_shot_list = [0.1]
 
 for few_shot in few_shot_list:
     TRAINING_CONFIG = {

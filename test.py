@@ -21,7 +21,7 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 """
-few-shot: 0.0(zero-shot), 0.3, 0.5, 0.8, 1.0(full-shot = transfer learning)
+few-shot: 0.0(zero-shot), 0.1, 0.3, 0.5, 0.7, 0.9, 1.0(full-shot = transfer learning)
 """
 
 
@@ -195,12 +195,6 @@ class Tester(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        if args.source_file == 'mimic':
-            vocab_size = 600  ########### change this!   vocab size 잘못됨
-        elif args.source_file == 'eicu':
-            vocab_size = 150
-        else:
-            raise NotImplementedError
 
         if args.bert_induced and args.bert_freeze:
             model_directory = 'bert_freeze'
@@ -213,10 +207,16 @@ class Tester(nn.Module):
             print('bert finetuning')
         elif not args.bert_induced:
             model_directory = 'bert_induced_False'
+            if args.source_file == 'mimic':
+                vocab_size = 600  ########### change this!   vocab size 잘못됨
+            elif args.source_file == 'eicu':
+                vocab_size = 150
+            else:
+                raise NotImplementedError
+
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
             filename = 'trained_single_rnn_{}'.format(args.seed)
-
 
         self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
         print('Load Model from {}'.format(self.source_path))
@@ -376,7 +376,7 @@ class Tester(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='both')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
