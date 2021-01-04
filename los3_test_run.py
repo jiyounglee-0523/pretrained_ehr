@@ -6,13 +6,13 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'test.py'
 
-few_shot_list = [0.3, 0.5, 0.7, 0.9]
+few_shot_list = [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
 
 for few_shot in few_shot_list:
     TRAINING_CONFIG = {
         "bert_induced": True,
-        "source_file": 'mimic',
-        "test_file": 'eicu',
+        "source_file": 'eicu',
+        "test_file": 'mimic',
         "few_shot": few_shot,
         "target": 'los>3day',
         "bert_freeze": True,

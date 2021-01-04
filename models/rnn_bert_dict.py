@@ -25,7 +25,7 @@ class dict_post_RNN(nn.Module):
 
     def forward(self, x, lengths):
         B = x.size(0)
-        lengths = lengths.squeeze().long()
+        lengths = lengths.squeeze(-1).long()
 
         x = self.embed_fc(x).to(self.device)
         packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
