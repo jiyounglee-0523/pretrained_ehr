@@ -132,7 +132,9 @@ v2.2 : bert embedding from dictionary (takes too long for training)
 
 v3.1: changed code to new seed number, run files, train 
 
-​            -> ToDo: change tester that brings the code
+v3.2 : modified test.py / fixed *_run.py
+
+
 
 
 ## To-Do

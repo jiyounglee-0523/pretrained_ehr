@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import torch.multiprocessing as mp
 
 from sklearn.metrics import roc_auc_score, average_precision_score
 
@@ -27,15 +28,15 @@ few-shot: 0.0(zero-shot), 0.3, 0.5, 0.8, 1.0(full-shot = transfer learning)
 def get_test_dataloader(args, data_type='train'):       # validation? test?
     if data_type == 'train':
         train_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'eval':
         eval_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'test':
         test_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=32)
 
     return dataloader
 
@@ -55,7 +56,7 @@ class Few_Shot_Dataset(Dataset):
 
         else:
             few_shot = args.few_shot
-            if few_shot == 0.0 or 1.0:
+            if few_shot == 0.0 or few_shot == 1.0:
                 path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
                                                                                                  args.seed)
@@ -375,10 +376,10 @@ class Tester(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
-    parser.add_argument('--few_shot', type=float, choices=[0.0, 0.3, 0.5, 0.8, 1.0], default=0.0)
-    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='mortality')
+    parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
+    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
@@ -394,50 +395,53 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=6)
+    parser.add_argument('--device_number', type=int, default=7)
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    args.bert_induced = True
     args.rnn_bidirection = False
     args.bert_freeze = True
 
     if args.source_file == args.test_file:
         assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"
 
-        # hyperparameter tuning
-        if args.target == 'readmission':
-            args.dropout = 0.3
-            args.embedding_dim = 256
-            args.hidden_dim = 128
-            args.lr = 0.0001
-            args.time_window = 'Total'
-            args.max_length = '200'
+    # hyperparameter tuning
+    if args.target == 'readmission':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 128
+        args.lr = 0.0001
+        args.time_window = 'Total'
+        args.max_length = '200'
 
-        elif args.target == 'mortality':
-            args.dropout = 0.3
-            args.embedding_dim = 128
-            args.hidden_dim = 128
-            args.lr = 0.0001
+    elif args.target == 'mortality':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 128
+        args.lr = 0.0001
 
-        elif args.target == 'los>3day':
-            args.dropout = 0.3
-            args.embedding_dim = 128
-            args.hidden_dim = 256
-            args.lr = 0.00005
+    elif args.target == 'los>3day':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 256
+        args.lr = 0.00005
 
-        elif args.target == 'los>7day':
-            args.dropout = 0.3
-            args.embedding_dim = 256
-            args.hidden_dim = 256
-            args.lr = 0.0001
+    elif args.target == 'los>7day':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 256
+        args.lr = 0.0001
 
-        elif args.target == 'dx_depth1_unique':
-            args.dropout = 0.3
-            args.embedding_dim = 768
-            args.hidden_dim = 128
-            args.lr = 0.0005
+    elif args.target == 'dx_depth1_unique':
+        args.dropout = 0.3
+        args.embedding_dim = 768
+        args.hidden_dim = 128
+        args.lr = 0.0005
+
+    mp.set_sharing_strategy('file_system')
 
     SEED = [2020, 2021, 2022, 2023, 2024]
     for seed in SEED:
