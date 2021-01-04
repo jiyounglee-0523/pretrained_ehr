@@ -46,6 +46,18 @@ class bert_dict_dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
+            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+
+            mimic_item_name.extend(eicu_item_name)
+            self.item_name = mimic_item_name
+            if self.target == 'dx_depth1_unique':
+                mimic_item_target.extend(eicu_item_target)
+                self.item_target = mimic_item_target
+            else:
+                self.item_target = torch.cat((mimic_item_target, eicu_item_target))
+
+
             mimic_vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', 'mimic_{}_word2embed.pkl'.format(args.item))
             mimic_word2embed = pickle.load(open(mimic_vocab_path, 'rb'))
 
@@ -56,11 +68,22 @@ class bert_dict_dataset(Dataset):
             self.word2embed = mimic_word2embed
 
         else:
+            path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed)
+            data = pickle.load(open(path, 'rb'))
+
+            if source_file == 'mimic':
+                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+
+            elif source_file == 'eicu':
+                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+
             vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_word2embed.pkl'.format(args.source_file, args.item))
             self.word2embed = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
-        return self.item_offset.size(0)
+        return len(self.item_name)
 
     def __getitem__(self, item):
         single_item_name = self.item_name[item]
@@ -90,4 +113,41 @@ class bert_dict_dataset(Dataset):
 
         return embedding, single_target, seq_len
 
-    def preprocess(self, ):
+    def preprocess(self, cohort, data_type, item, time_window, target):
+        if time_window == 'Total':
+            name_window = '{}_name'.format(item)
+            offset_window = 'order_offset'
+            offset_order_window = '{}_offset_order'.format(item)
+            id_window = '{}_id_{}hr'.format(item, time_window)
+            target_fold = '{}_fold'.format(target)
+
+        else:
+            name_window = '{}_name_{}hr'.format(item, time_window)
+            offset_window = 'order_offset_{}hr'.format(time_window)
+            offset_order_window = '{}_offset_order_{}hr'.format(item, time_window)
+            id_window = '{}_id_{}hr'.format(item, time_window)
+            target_fold = '{}_fold'.format(target)
+            if target == 'dx_depth1_unique':
+                target_fold = 'dx_fold'
+
+        # extract cohort
+        cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold]]
+
+        if data_type == 'train':
+            cohort = cohort[cohort[target_fold] == 1]
+        elif data_type == 'eval':
+            cohort = cohort[cohort[target_fold] == 2]
+        elif data_type == 'test':
+            cohort = cohort[cohort[target_fold] == 0]
+
+        # pad
+        item_name = cohort[name_window].values.tolist()
+
+        ## offset order? offset?
+
+        if target == 'dx_depth1_unique':
+            item_target = cohort[target].values.tolist()
+        else:
+            item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of B
+
+        return item_name, item_target

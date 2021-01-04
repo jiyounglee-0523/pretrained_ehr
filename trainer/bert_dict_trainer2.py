@@ -10,14 +10,12 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class bert_dict_Trainer():
-    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
+    def __init__(self, args, train_dataloader, valid_dataloader, device):
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
         self.device = device
-        self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
-        args = wandb.config
+        wandb.init(project='test', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -28,14 +26,13 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batchsize{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
+        filename = 'trained_bert_dict_{}'.format(args.seed)
 
         path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
-
         print('Model will be saved in {}'.format(path))
 
-        self.best_eval_path = path + self.valid_index + '_best_eval.pt'
-        self.final_path = path + self.valid_index + '_final.pt'
+        self.best_eval_path = path + '_best_eval.pt'
+        self.final_path = path + '_final.pt'
 
         if args.target == 'dx_depth1_unique':
             output_size = 18
@@ -122,7 +119,8 @@ class bert_dict_Trainer():
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.final_path)
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.final_path)
                 break
 
     def evaluation(self):

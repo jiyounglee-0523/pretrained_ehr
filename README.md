@@ -130,6 +130,10 @@ v2.2 : bert embedding from dictionary (takes too long for training)
 
 **v3.0**: test.py (few_shot, zero_shot, interchange)
 
+v3.1: changed code to new seed number, run files, train 
+
+​            -> ToDo: change tester that brings the code
+
 
 ## To-Do
 - work on multiple items

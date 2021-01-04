@@ -71,9 +71,9 @@ class eicu_dataset(Dataset):
         # time window
         if time_window == 'Total':
             name_window = '{}_name'.format(item)
-            offset_window = '{}_offset'.format(item)
+            offset_window = 'order_offset'.format(item)
             offset_order_window = '{}_offset_order'.format(item)     ##### 바꿔야 한다!!
-            id_window = None   ### 바꿔야 한다!!!
+            id_window = '{}_id_{}hr'.format(item, time_window)
             target_fold = '{}_fold'.format(target)
         else:
             name_window = '{}_name_{}hr'.format(item, time_window)

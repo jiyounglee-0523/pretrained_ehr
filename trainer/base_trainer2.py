@@ -10,14 +10,14 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class Trainer(nn.Module):
-    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
+    def __init__(self, args, train_dataloader, valid_dataloader, device):
         super().__init__()
 
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
+        wandb.init(project='test', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
