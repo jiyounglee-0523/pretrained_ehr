@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import torch.multiprocessing as mp
 
 from sklearn.metrics import roc_auc_score, average_precision_score
 
@@ -27,15 +28,15 @@ few-shot: 0.0(zero-shot), 0.3, 0.5, 0.8, 1.0(full-shot = transfer learning)
 def get_test_dataloader(args, data_type='train'):       # validation? test?
     if data_type == 'train':
         train_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'eval':
         eval_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
 
     elif data_type == 'test':
         test_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=32)
 
     return dataloader
 
@@ -55,7 +56,7 @@ class Few_Shot_Dataset(Dataset):
 
         else:
             few_shot = args.few_shot
-            if few_shot == 0.0 or 1.0:
+            if few_shot == 0.0 or few_shot == 1.0:
                 path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
                                                                                                  args.seed)
@@ -115,7 +116,12 @@ class Few_Shot_Dataset(Dataset):
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
-            raise NotImplementedError
+            name_window = '{}_name'.format(item)
+            offset_window = 'order_offset'
+            offset_order_window = '{}_offset_order'.format(item)
+            id_window = '{}_id_{}hr'.format(item, time_window)
+            target_fold = '{}_fold'.format(target)
+
         else:
             name_window = '{}_name_{}hr'.format(item, time_window)
             offset_window = 'order_offset_{}hr'.format(time_window)
@@ -200,6 +206,7 @@ class Tester(nn.Module):
             model_directory = 'bert_freeze'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
             print('bert freeze')
+            filename = 'trained_bert_dict_{}'.format(args.seed)
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
@@ -208,16 +215,15 @@ class Tester(nn.Module):
             model_directory = 'bert_induced_False'
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
+            filename = 'trained_single_rnn_{}'.format(args.seed)
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}_fold1'.format(args.dropout, args.embedding_dim, args.hidden_dim,       #### change the filename,  NO FOLD NAME!!!
-                                                                  args.rnn_bidirection, args.lr, args.batch_size)
 
         self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
         print('Load Model from {}'.format(self.source_path))
 
-        target_filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}_fewshot{}_seed{}'.format(args.dropout, args.embedding_dim, args.hidden_dim,
-                                                                                                       args.rnn_bidirection, lr, args.batch_size, args.few_shot, seed)
+        target_filename = 'few_shot{}_seed{}'.format(args.few_shot, seed)
         target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
+        print('Model will be saved in {}'.format(target_path))
         self.best_target_path = target_path + '_best_eval.pt'
         self.final_path = target_path + '_final.pt'
 
@@ -300,7 +306,8 @@ class Tester(nn.Module):
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.final_path)
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.final_path)
 
                 break
 
@@ -369,33 +376,72 @@ class Tester(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
-    parser.add_argument('--few_shot', type=float, choices=[0.0, 0.3, 0.5, 0.8, 1.0], default=0.0)
+    parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
     parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=256)
-    parser.add_argument('--dropout', type=float, default=0.1)
-    parser.add_argument('--embedding_dim', type=int, default=768)
-    parser.add_argument('--hidden_dim', type=int, default=512)
+    # parser.add_argument('--dropout', type=float, default=0.1)
+    # parser.add_argument('--embedding_dim', type=int, default=768)
+    # parser.add_argument('--hidden_dim', type=int, default=512)
     parser.add_argument('--rnn_bidirection', action='store_true')
-    parser.add_argument('--n_epochs', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--n_epochs', type=int, default=500)
+    # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=6)
+    parser.add_argument('--device_number', type=int, default=7)
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    args.bert_induced = True
+    args.rnn_bidirection = False
+    args.bert_freeze = True
+
     if args.source_file == args.test_file:
         assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"
+
+    # hyperparameter tuning
+    if args.target == 'readmission':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 128
+        args.lr = 0.0001
+        args.time_window = 'Total'
+        args.max_length = '200'
+
+    elif args.target == 'mortality':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 128
+        args.lr = 0.0001
+
+    elif args.target == 'los>3day':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 256
+        args.lr = 0.00005
+
+    elif args.target == 'los>7day':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 256
+        args.lr = 0.0001
+
+    elif args.target == 'dx_depth1_unique':
+        args.dropout = 0.3
+        args.embedding_dim = 768
+        args.hidden_dim = 128
+        args.lr = 0.0005
+
+    mp.set_sharing_strategy('file_system')
 
     SEED = [2020, 2021, 2022, 2023, 2024]
     for seed in SEED:
