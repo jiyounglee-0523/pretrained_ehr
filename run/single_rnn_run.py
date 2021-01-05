@@ -6,8 +6,8 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main2.py'
 
-source_file_list = ['mimic', 'eicu', 'both']
-target_list = ['readmission']
+source_file_list = ['mimic', 'eicu']
+target_list = ['readmission', 'mortality', 'los>3day']
 
 for source_file in source_file_list:
     for target in target_list:
@@ -15,7 +15,7 @@ for source_file in source_file_list:
             "source_file": source_file,
             "target": target,
             "bert_freeze": True,
-            "device_number": 4
+            "device_number": 0
         }
 
 

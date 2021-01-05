@@ -7,7 +7,7 @@ PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main2.py'
 
 source_file_list = ['mimic', 'eicu', 'both']
-target_list = ['readmission']
+target_list = ['los>7day', 'dx_depth1_unique']
 
 for source_file in source_file_list:
     for target in target_list:
@@ -16,7 +16,7 @@ for source_file in source_file_list:
             "source_file": source_file,
             "target": target,
             "bert_freeze": True,
-            "device_number": 4
+            "device_number": 7
         }
 
 

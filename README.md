@@ -134,6 +134,8 @@ v3.1: changed code to new seed number, run files, train
 
 v3.2 : modified test.py / fixed *_run.py
 
+v3.3 : save model at best_auprc (not best_eval_loss)
+
 
 
 

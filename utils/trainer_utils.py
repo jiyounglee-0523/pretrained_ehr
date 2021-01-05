@@ -3,6 +3,7 @@ import torch
 
 '''
 reference: https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
+modified for our purpose
 '''
 
 class EarlyStopping:
@@ -26,13 +27,13 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = 0
         self.delta = delta
         #self.path = path
         self.trace_func = trace_func
-    def __call__(self, val_loss):
+    def __call__(self, val_auprc):
 
-        score = -val_loss
+        score = val_auprc
 
         if self.best_score is None:
             self.best_score = score
@@ -44,8 +45,8 @@ class EarlyStopping:
         else:
             self.best_score = score
             if self.verbose:
-                self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f})')
-            self.val_loss_min = val_loss
+                self.trace_func(f'Validation AUPRC increased ({self.val_loss_min:.6f} --> {val_auprc:.6f})')
+            self.val_loss_min = val_auprc
             self.counter = 0
 
 def count_parameters(model):
