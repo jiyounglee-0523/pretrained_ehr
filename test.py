@@ -177,7 +177,7 @@ class Tester(nn.Module):
         self.test_dataloader = test_dataloader
         self.device = device
 
-        wandb.init(project='test', entity='pretrained_ehr', config=args, reinit=True)
+        wandb.init(project='test_auprc', entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -219,17 +219,18 @@ class Tester(nn.Module):
             filename = 'trained_single_rnn_{}'.format(args.seed)
 
         self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
-        print('Load Model from {}'.format(self.source_path))
 
         target_filename = 'few_shot{}_seed{}'.format(args.few_shot, seed)
         target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
         print('Model will be saved in {}'.format(target_path))
-        self.best_target_path = target_path + '_best_eval.pt'
+
+        self.best_target_path = target_path + '_best_auprc.pt'
         self.final_path = target_path + '_final.pt'
 
 
         # load parameters
-        best_eval_path = self.source_path + '_best_eval.pt'
+        best_eval_path = self.source_path + '_best_auprc.pt'
+        print('Load Model from {}'.format(best_eval_path))
         ckpt = torch.load(best_eval_path)
         self.model.load_state_dict(ckpt['model_state_dict'])
         print("Model successfully loaded!")
@@ -274,17 +275,17 @@ class Tester(nn.Module):
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
-            if best_loss > avg_eval_loss:
+            if best_auprc < auprc_eval:
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
 
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
+                            'loss': best_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.best_target_path)
-
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.best_target_path)
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
             wandb.log({'train_loss': avg_train_loss,
@@ -299,7 +300,7 @@ class Tester(nn.Module):
             print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval,
                                                                                          auprc_eval))
 
-            self.early_stopping(avg_eval_loss)
+            self.early_stopping(auprc_eval)
             if self.early_stopping.early_stop:
                 print('Early stopping')
                 torch.save({'model_state_dict': self.model.state_dict(),
@@ -413,32 +414,30 @@ def main():
         args.dropout = 0.3
         args.embedding_dim = 256
         args.hidden_dim = 128
-        args.lr = 0.0001
-        args.time_window = 'Total'
-        args.max_length = '200'
+        args.lr = 0.0005
 
     elif args.target == 'mortality':
         args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 128
+        args.embedding_dim = 256
+        args.hidden_dim = 512
         args.lr = 0.0001
 
     elif args.target == 'los>3day':
         args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 256
+        args.embedding_dim = 512
+        args.hidden_dim = 512
         args.lr = 0.00005
 
     elif args.target == 'los>7day':
         args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 256
+        args.embedding_dim = 128
+        args.hidden_dim = 512
         args.lr = 0.0001
 
     elif args.target == 'dx_depth1_unique':
         args.dropout = 0.3
-        args.embedding_dim = 768
-        args.hidden_dim = 128
+        args.embedding_dim = 512
+        args.hidden_dim = 512
         args.lr = 0.0005
 
     mp.set_sharing_strategy('file_system')
