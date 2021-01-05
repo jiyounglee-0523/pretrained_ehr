@@ -44,32 +44,30 @@ def main():
         args.dropout = 0.3
         args.embedding_dim = 256
         args.hidden_dim = 128
-        args.lr = 0.0001
-        args.time_window = 'Total'
-        args.max_length = '200'
+        args.lr = 0.0005
 
     elif args.target == 'mortality':
         args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 128
+        args.embedding_dim = 256
+        args.hidden_dim = 512
         args.lr = 0.0001
 
     elif args.target == 'los>3day':
         args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 256
+        args.embedding_dim = 512
+        args.hidden_dim = 512
         args.lr = 0.00005
 
     elif args.target == 'los>7day':
         args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 256
+        args.embedding_dim = 128
+        args.hidden_dim = 512
         args.lr = 0.0001
 
     elif args.target == 'dx_depth1_unique':
         args.dropout = 0.3
-        args.embedding_dim = 768
-        args.hidden_dim = 128
+        args.embedding_dim = 512
+        args.hidden_dim = 512
         args.lr = 0.0005
 
     if args.bert_induced:
