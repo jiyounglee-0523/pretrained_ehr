@@ -177,7 +177,7 @@ class Tester(nn.Module):
         self.test_dataloader = test_dataloader
         self.device = device
 
-        wandb.init(project='test_auprc', entity='pretrained_ehr', config=args, reinit=True)
+        wandb.init(project='test_auprc_early30', entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -200,7 +200,7 @@ class Tester(nn.Module):
             model_directory = 'bert_freeze'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
             print('bert freeze')
-            filename = 'trained_bert_dict_{}'.format(args.seed)
+            filename = 'trained_bert_dict30_{}'.format(args.seed)
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
@@ -216,13 +216,13 @@ class Tester(nn.Module):
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
-            filename = 'trained_single_rnn_{}'.format(args.seed)
+            filename = 'trained_single_rnn30_{}'.format(args.seed)
 
         self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
 
-        target_filename = 'few_shot{}_seed{}'.format(args.few_shot, seed)
+        target_filename = 'few_shot30{}_seed{}'.format(args.few_shot, seed)
         target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
-        print('Model will be saved in {}'.format(target_path))
+
 
         self.best_target_path = target_path + '_best_auprc.pt'
         self.final_path = target_path + '_final.pt'
@@ -234,9 +234,10 @@ class Tester(nn.Module):
         ckpt = torch.load(best_eval_path)
         self.model.load_state_dict(ckpt['model_state_dict'])
         print("Model successfully loaded!")
+        print('Model will be saved in {}'.format(self.best_target_path))
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.early_stopping = EarlyStopping(patience=7, verbose=True)
+        self.early_stopping = EarlyStopping(patience=30, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -396,13 +397,14 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=7)
+    parser.add_argument('--device_number', type=int, default=0)
+    parser.add_argument('--seed', type=int)
+
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    args.bert_induced = True
     args.rnn_bidirection = False
     args.bert_freeze = True
 
@@ -414,35 +416,37 @@ def main():
         args.dropout = 0.3
         args.embedding_dim = 256
         args.hidden_dim = 128
-        args.lr = 0.0005
+        args.lr = 0.0001
+
 
     elif args.target == 'mortality':
         args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 512
+        args.embedding_dim = 128
+        args.hidden_dim = 128
         args.lr = 0.0001
 
     elif args.target == 'los>3day':
         args.dropout = 0.3
-        args.embedding_dim = 512
-        args.hidden_dim = 512
+        args.embedding_dim = 128
+        args.hidden_dim = 256
         args.lr = 0.00005
 
     elif args.target == 'los>7day':
         args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 512
+        args.embedding_dim = 256
+        args.hidden_dim = 256
         args.lr = 0.0001
 
     elif args.target == 'dx_depth1_unique':
         args.dropout = 0.3
-        args.embedding_dim = 512
-        args.hidden_dim = 512
+        args.embedding_dim = 256
+        args.hidden_dim = 128
         args.lr = 0.0005
 
     mp.set_sharing_strategy('file_system')
 
     SEED = [2020, 2021, 2022, 2023, 2024]
+
     for seed in SEED:
         random.seed(seed)
         np.random.seed(seed)

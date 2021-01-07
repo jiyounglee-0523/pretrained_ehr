@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+import pickle
+import os
+
 class dict_post_RNN(nn.Module):
     def __init__(self, args, output_size, device, n_layers=1):
         super().__init__()
@@ -11,7 +14,15 @@ class dict_post_RNN(nn.Module):
         self.hidden_dim = args.hidden_dim
         self.device = device
 
-        self.embed_fc = nn.Linear(768, args.embedding_dim)    # hard_coding
+        initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_cls_initialized.pkl'.format(args.source_file, args.item)), 'rb'))
+        if args.source_file == 'mimic':
+            self.embed = nn.Embedding(545, 768, _weight=initial_embed_weight)
+        elif args.source_file == 'eicu':
+            self.embed = nn.Embedding(157, 768, _weight=initial_embed_weight)
+        elif args.source_file == 'both':
+            raise NotImplementedError
+
+        self.compress_fc = nn.Linear(768, args.embedding_dim)
 
         if args.rnn_model_type == 'gru':
             self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
@@ -26,9 +37,11 @@ class dict_post_RNN(nn.Module):
     def forward(self, x, lengths):
         B = x.size(0)
         lengths = lengths.squeeze(-1).long()
+        x = x.long()
 
-        x = self.embed_fc(x).to(self.device)
-        packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        embedded = self.compress_fc(self.embed(x).to(self.device))
+
+        packed = pack_padded_sequence(embedded, lengths, batch_first=True, enforce_sorted=False)
         output, hidden = self.model(packed)
         output_seq, output_len = pad_packed_sequence(output, batch_first=True)
 

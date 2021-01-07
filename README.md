@@ -36,11 +36,16 @@ python main.py \
 
 * maxmimum batch size is 128, otherwise it will show 'Out of Memory' error.
 
+OR
 
+(RECOMMEND BELOW)
 
+for singleRNN
+python run/single_rnn_run.py
 
-or
-python run.py   (currently working on run.py, not recommended)
+for cls_learnable
+python run/bert_induced_run.py
+
 ```
 
 
@@ -48,8 +53,8 @@ python run.py   (currently working on run.py, not recommended)
 ## Model Saved Directory
 
 ```
-arxiv_output
-├─ bert_induced_False (means single_rnn)
+KDD_output
+├─ singleRNN
 │  ├─ mimic
 │  │   ├─ readmission
 │  │   ├─ mortality
@@ -63,7 +68,7 @@ arxiv_output
 │      ├─ los_7days
 │      └─ dx_depth1_unique
 │
-├─ bert_freeze 
+├─ cls_learnable 
 │  ├─ mimic
 │  │   ├─ readmission
 │  │   ├─ mortality
@@ -138,10 +143,12 @@ v3.3 : save model at best_auprc (not best_eval_loss)
 
 
 
+**v4.0**: cls_learnable, run.py fixed
+
 
 ## To-Do
 - work on multiple items
 - work on ordering multiple item datasets
 - [Dataset] check if lengths of padded *item_id* and *item_offset_order* are the same.
 
-- change wandb init (reinint=True)    for seed 
+- work on both (cls_learnable)

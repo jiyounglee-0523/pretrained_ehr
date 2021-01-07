@@ -36,7 +36,7 @@ class RNNmodels(nn.Module):
     def forward(self, x, lengths):
         x = self.embedding(x.long().to(self.device))
 
-        lengths = lengths.squeeze()
+        lengths = lengths.squeeze(-1).long()
         packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         output, hidden = self.model(packed)
         output_seq, output_len = pad_packed_sequence(output, batch_first=True)

@@ -10,14 +10,12 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class bert_dict_Trainer():
-    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
+    def __init__(self, args, train_dataloader, valid_dataloader, device):
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
         self.device = device
-        self.valid_index = '_fold' + str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
-        args = wandb.config
+        wandb.init(project='learnable_cls_output', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -28,14 +26,13 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batchsize{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
+        filename = 'cls_learnable_{}'.format(args.seed)
 
-        path = os.path.join(args.path, 'bert_freeze', args.source_file, file_target_name, filename)
-
+        path = os.path.join(args.path, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
-        self.best_eval_path = path + self.valid_index + '_best_eval.pt'
-        self.final_path = path + self.valid_index + '_final.pt'
+        self.best_eval_path = path + '_best_auprc.pt'
+        self.final_path = path + '_final.pt'
 
         if args.target == 'dx_depth1_unique':
             output_size = 18
@@ -47,7 +44,7 @@ class bert_dict_Trainer():
         self.model = dict_post_RNN(args, output_size, device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-        self.early_stopping = EarlyStopping(patience=7, verbose=True)
+        self.early_stopping = EarlyStopping(patience=30, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -56,12 +53,12 @@ class bert_dict_Trainer():
         best_auroc = 0.0
         best_auprc = 0.0
 
-        if os.path.exists(self.best_eval_path):
-            ckpt = torch.load(self.best_eval_path)
-            self.model.load_state_dict(ckpt['model_state_dict'])
-            best_loss = ckpt['loss']
-            best_auroc = ckpt['auroc']
-            best_auprc = ckpt['auprc']
+        # if os.path.exists(self.best_eval_path):
+        #     ckpt = torch.load(self.best_eval_path)
+        #     self.model.load_state_dict(ckpt['model_state_dict'])
+        #     best_loss = ckpt['loss']
+        #     best_auroc = ckpt['auroc']
+        #     best_auprc = ckpt['auprc']
 
         for n_epoch in range(self.n_epochs + 1):
             preds_train = []
@@ -93,15 +90,16 @@ class bert_dict_Trainer():
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
-            if best_loss > avg_eval_loss:
+            if best_auprc < auprc_eval:
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
+                            'loss': best_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.best_eval_path)
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.best_eval_path)
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
             wandb.log({'train_loss': avg_train_loss,
@@ -114,7 +112,7 @@ class bert_dict_Trainer():
             print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
-            self.early_stopping(avg_eval_loss)
+            self.early_stopping(auprc_eval)
 
             if self.early_stopping.early_stop:
                 print('Early stopping')
@@ -122,7 +120,8 @@ class bert_dict_Trainer():
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.final_path)
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.final_path)
                 break
 
     def evaluation(self):
