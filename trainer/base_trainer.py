@@ -10,16 +10,14 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class Trainer(nn.Module):
-    def __init__(self, args, train_dataloader, valid_dataloader, device, valid_index):
+    def __init__(self, args, train_dataloader, valid_dataloader, device):
         super().__init__()
 
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
         self.device = device
-        self.valid_index = '_fold'+str(valid_index)
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
-        args = wandb.config
+        wandb.init(project='learnable_cls_output', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -30,17 +28,17 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'dropout{}_emb{}_hid{}_bidirect{}_lr{}_batch_size{}'.format(args.dropout, args.embedding_dim, args.hidden_dim, args.rnn_bidirection, args.lr, args.batch_size)
-        path = os.path.join(args.path, 'bert_induced_False', args.source_file, file_target_name, filename)
+        filename = 'trained_single_rnn_{}'.format(args.seed)
+        path = os.path.join(args.path, 'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
-        self.best_eval_path = path + self.valid_index +'_best_eval.pt'
-        self.final_path = path + self.valid_index + '_final.pt'
+        self.best_eval_path = path + '_best_auprc.pt'
+        self.final_path = path + '_final.pt'
 
         if args.source_file == 'mimic':
-            vocab_size = 600             ########### change this!   vocab size 잘못됨
+            vocab_size = 545
         elif args.source_file == 'eicu':
-            vocab_size = 150
+            vocab_size = 157
         else:
             raise NotImplementedError
 
@@ -54,7 +52,7 @@ class Trainer(nn.Module):
         self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-        self.early_stopping = EarlyStopping(patience=7, verbose=True)
+        self.early_stopping = EarlyStopping(patience=30, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -64,12 +62,12 @@ class Trainer(nn.Module):
         best_auroc = 0.0
         best_auprc = 0.0
 
-        if os.path.exists(self.best_eval_path):
-            ckpt = torch.load(self.best_eval_path)
-            self.model.load_state_dict(ckpt['model_state_dict'])
-            best_loss = ckpt['loss']
-            best_auroc = ckpt['auroc']
-            best_auprc = ckpt['auprc']
+        # if os.path.exists(self.best_eval_path):
+        #     ckpt = torch.load(self.best_eval_path)
+        #     self.model.load_state_dict(ckpt['model_state_dict'])
+        #     best_loss = ckpt['loss']
+        #     best_auroc = ckpt['auroc']
+        #     best_auprc = ckpt['auprc']
 
         for n_epoch in range(self.n_epochs + 1):
 
@@ -81,7 +79,7 @@ class Trainer(nn.Module):
                 self.model.train()
                 self.optimizer.zero_grad(set_to_none=True)
 
-                item_id, item_offset, item_offset_order, lengths, target = sample
+                item_id, target, lengths = sample
                 item_id = item_id.to(self.device)
                 target = target.to(self.device)
 
@@ -102,16 +100,17 @@ class Trainer(nn.Module):
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
-            if best_loss > avg_eval_loss:
+            if best_auprc < auprc_eval:
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
 
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
+                            'loss': best_loss,
                             'auroc': best_auroc,
-                            'auprc': best_auprc}, self.best_eval_path)
+                            'auprc': best_auprc,
+                            'epochs': n_epoch}, self.best_eval_path)
 
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
@@ -125,14 +124,15 @@ class Trainer(nn.Module):
             print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
-            self.early_stopping(avg_eval_loss)
+            self.early_stopping(auprc_eval)
             if self.early_stopping.early_stop:
                 print('Early stopping')
                 torch.save({'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'loss': avg_eval_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc}, self.final_path)
+                            'auroc': auroc_eval,
+                            'auprc': auprc_eval,
+                            'epochs': n_epoch}, self.final_path)
                 break
 
 
@@ -145,12 +145,8 @@ class Trainer(nn.Module):
 
         with torch.no_grad():
             for iter, sample in enumerate(self.eval_dataloader):
-                item_id, item_offset, item_offset_order, lengths, target = sample
-                item_id.to(self.device);
-                item_offset.to(self.device);
-                item_offset_order.to(self.device)
-                lengths.to(self.device);
-                target.to(self.device)
+                item_id, target, lengths  = sample
+                item_id.to(self.device); target.to(self.device)
 
                 y_pred = self.model(item_id, lengths)
                 loss = self.criterion(y_pred, target.float().to(self.device))
