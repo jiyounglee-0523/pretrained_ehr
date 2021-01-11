@@ -4,14 +4,14 @@ import os
 # Configuration before run
 
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
-SRC_PATH = PATH+'main3.py'
+SRC_PATH = PATH+'main_tmp.py'
 
-device = 7
+device = 0
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
 
 TRAINING_CONFIG = {
-    #"bert_induced": True,
+    "bert_induced": True,
     "source_file": 'eicu',
     "target": 'dx_depth1_unique',
     "bert_freeze": True,

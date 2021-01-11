@@ -36,12 +36,40 @@ def main():
     args.rnn_bidirection = False
     args.bert_freeze = True
 
-    # hyperparameter tuning
-    args.dropout = 0.3
-    args.embedding_dim = 128
-    args.hidden_dim = 256
-    args.lr = 1e-4
+    # debug
+    # args.bert_induced = True
 
+    # hyperparameter tuning
+    if args.target == 'readmission':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 128
+        args.lr = 0.0001
+
+
+    elif args.target == 'mortality':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 128
+        args.lr = 0.0001
+
+    elif args.target == 'los>3day':
+        args.dropout = 0.3
+        args.embedding_dim = 128
+        args.hidden_dim = 256
+        args.lr = 0.00005
+
+    elif args.target == 'los>7day':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 256
+        args.lr = 0.0001
+
+    elif args.target == 'dx_depth1_unique':
+        args.dropout = 0.3
+        args.embedding_dim = 256
+        args.hidden_dim = 128
+        args.lr = 0.0005
 
     if args.bert_induced:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
@@ -59,7 +87,7 @@ def main():
 
     mp.set_sharing_strategy('file_system')
 
-    SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
+    SEED = [2029]
 
     for seed in SEED:
         random.seed(seed)

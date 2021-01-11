@@ -73,7 +73,7 @@ class Few_Shot_Dataset(Dataset):
 
             self.item_name, self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_word2embed.pkl'.format(test_file, item))
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_id_dict.pkl'.format(test_file, item))
             self.word2embed = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
@@ -103,10 +103,10 @@ class Few_Shot_Dataset(Dataset):
         def embed_dict(x):
             return self.word2embed[x]
         embedding = list(map(embed_dict, single_item_name))  # list with length seq_len
-        embedding = torch.Tensor(np.stack(embedding, axis=0))  # tensor of shape (seq_len, 768)
+        embedding = torch.Tensor(embedding)
 
-        padding = torch.zeros(int(self.max_length) - embedding.size(0), embedding.size(1))
-        embedding = torch.cat((embedding, padding), dim=0)
+        padding = torch.zeros(int(self.max_length) - embedding.size(0))
+        embedding = torch.cat((embedding, padding), dim=-1)
 
         if not self.bert_induced:
             return single_item_id, single_target, single_length
@@ -177,7 +177,7 @@ class Tester(nn.Module):
         self.test_dataloader = test_dataloader
         self.device = device
 
-        wandb.init(project='test_auprc_early30', entity='pretrained_ehr', config=args, reinit=True)
+        wandb.init(project='test_learnable_cls_output', entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -191,36 +191,36 @@ class Tester(nn.Module):
 
         file_target_name = args.target
         if file_target_name == 'los>3day':
-            file_target_name = 'los_3day'
+            file_target_name = 'los_3days'
         elif file_target_name == 'los>7day':
-            file_target_name = 'los_7day'
+            file_target_name = 'los_7days'
 
 
         if args.bert_induced and args.bert_freeze:
-            model_directory = 'bert_freeze'
+            model_directory = 'cls_learnable'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
             print('bert freeze')
-            filename = 'trained_bert_dict30_{}'.format(args.seed)
+            filename = 'cls_learnable_{}'.format(args.seed)
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
             print('bert finetuning')
         elif not args.bert_induced:
-            model_directory = 'bert_induced_False'
+            model_directory = 'singleRNN'
             if args.source_file == 'mimic':
-                vocab_size = 600  ########### change this!   vocab size 잘못됨
+                vocab_size = 545
             elif args.source_file == 'eicu':
-                vocab_size = 150
+                vocab_size = 157
             else:
                 raise NotImplementedError
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
-            filename = 'trained_single_rnn30_{}'.format(args.seed)
+            filename = 'trained_single_rnn_{}'.format(args.seed)
 
         self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
 
-        target_filename = 'few_shot30{}_seed{}'.format(args.few_shot, seed)
+        target_filename = 'few_shot{}_from{}_to{}_seed{}'.format(args.few_shot, args.source_file, args.test_file,seed)
         target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
 
 
@@ -395,7 +395,7 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', type=str, default='clinical_bert')
     parser.add_argument('--bert_freeze', action='store_true')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/arxiv_output/')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=int, default=0)
     parser.add_argument('--seed', type=int)
@@ -412,40 +412,14 @@ def main():
         assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"
 
     # hyperparameter tuning
-    if args.target == 'readmission':
-        args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 128
-        args.lr = 0.0001
-
-
-    elif args.target == 'mortality':
-        args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 128
-        args.lr = 0.0001
-
-    elif args.target == 'los>3day':
-        args.dropout = 0.3
-        args.embedding_dim = 128
-        args.hidden_dim = 256
-        args.lr = 0.00005
-
-    elif args.target == 'los>7day':
-        args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 256
-        args.lr = 0.0001
-
-    elif args.target == 'dx_depth1_unique':
-        args.dropout = 0.3
-        args.embedding_dim = 256
-        args.hidden_dim = 128
-        args.lr = 0.0005
+    args.dropout = 0.3
+    args.embedding_dim = 128
+    args.hidden_dim = 256
+    args.lr = 1e-4
 
     mp.set_sharing_strategy('file_system')
 
-    SEED = [2020, 2021, 2022, 2023, 2024]
+    SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
 
     for seed in SEED:
         random.seed(seed)

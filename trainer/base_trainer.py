@@ -24,9 +24,9 @@ class Trainer(nn.Module):
 
         file_target_name = args.target
         if file_target_name == 'los>3day':
-            file_target_name = 'los_3day'
+            file_target_name = 'los_3days'
         elif file_target_name == 'los>7day':
-            file_target_name = 'los_7day'
+            file_target_name = 'los_7days'
 
         filename = 'trained_single_rnn_{}'.format(args.seed)
         path = os.path.join(args.path, 'singleRNN', args.source_file, file_target_name, filename)
