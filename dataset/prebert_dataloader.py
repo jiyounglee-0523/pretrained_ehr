@@ -12,23 +12,23 @@ import pickle
 TO-DO: Implement Total (eicu and mimic combined)
 """
 
-def bertinduced_get_dataloader(args, validation_index, data_type='train'):
+def bertinduced_get_dataloader(args, data_type='train'):
     if data_type == 'train':
-        train_data = healthcare_dataset(args, validation_index, data_type)
+        train_data = healthcare_dataset(args, data_type)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=False)
 
     elif data_type == 'eval':
-        eval_data = healthcare_dataset(args, validation_index, data_type)
+        eval_data = healthcare_dataset(args, data_type)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'test':
-        test_data = healthcare_dataset(args, 0, data_type)
+        test_data = healthcare_dataset(args, data_type)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
 
     return dataloader
 
 class healthcare_dataset(Dataset):
-    def __init__(self, args, validation_index, data_type):
+    def __init__(self, args, data_type):
         source_file = args.source_file
         self.target = args.target
         item = args.item
@@ -37,22 +37,22 @@ class healthcare_dataset(Dataset):
         self.word_max_length = args.word_max_length
 
         if source_file == 'both':
-            path = '/home/jylee/data/pretrained_ehr/mimic_{}_{}_{}.pkl'.format(time_window, item, self.max_length)
+            path = '/home/jylee/data/pretrained_ehr/mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed)
             mimic = pickle.load(open(path,'rb'))
 
-            path = '/home/jylee/data/pretrained_ehr/eicu_{}_{}_{}.pkl'.format(time_window, item, self.max_length)
+            path = '/home/jylee/data/pretrained_ehr/eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed)
             eicu = pickle.load(open(path, 'rb'))
 
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            mimic_item_name, mimic_item_offset, mimic_item_offset_order, mimic_item_target = self.preprocess(mimic, validation_index, data_type, item, time_window, self.target)
-            eicu_item_name, eicu_item_offset, eicu_item_offset_order, eicu_item_target = self.preprocess(eicu, validation_index, data_type, item, time_window, self.target)
+            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
 
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
-            self.item_offset = torch.cat((mimic_item_offset, eicu_item_offset), dim=0)
-            self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)
+            # self.item_offset = torch.cat((mimic_item_offset, eicu_item_offset), dim=0)
+            # self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
                 self.item_target = mimic_item_target
@@ -60,7 +60,7 @@ class healthcare_dataset(Dataset):
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
         else:
-            path = '/home/jylee/data/pretrained_ehr/{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length)
+            path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed)
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -70,12 +70,12 @@ class healthcare_dataset(Dataset):
             elif source_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, validation_index, data_type, item, time_window, self.target)
+            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
         self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
 
     def __len__(self):
-        return self.item_offset.size(0)
+        return len(self.item_name)
 
     def __getitem__(self, item):
         single_item_name = self.item_name[item]
@@ -86,7 +86,6 @@ class healthcare_dataset(Dataset):
         assert len(single_item_name) == int(self.max_length), "item_name padded wrong"
 
         single_item_name = self.tokenizer(single_item_name, padding = 'max_length', return_tensors='pt', max_length=self.word_max_length)  # seq_len x words
-
 
         # single_item_offset = torch.cat([self.item_offset[item]] * seq_len, dim=0)
         # single_item_offset_order = torch.cat([self.item_offset_order[item]] * seq_len, dim=0)
@@ -101,10 +100,10 @@ class healthcare_dataset(Dataset):
             single_target[target_list - 1] = 1     # shape of 18
 
         # implement single_length later
-
         return single_item_name, single_target, seq_len
 
-    def preprocess(self, cohort, validation_index, data_type, item, time_window, target):
+
+    def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
             raise NotImplementedError
 
@@ -119,12 +118,10 @@ class healthcare_dataset(Dataset):
         # extract cohort
         cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold]]
 
-
         if data_type == 'train':
-            cohort = cohort[cohort[target_fold] != 0]  # 0 is for test dataset
-            cohort = cohort[cohort[target_fold] != validation_index]
+            cohort = cohort[cohort[target_fold] == 1]
         elif data_type == 'eval':
-            cohort = cohort[cohort[target_fold] == validation_index]
+            cohort = cohort[cohort[target_fold] == 2]
         elif data_type == 'test':
             cohort = cohort[cohort[target_fold] == 0]
         # pad
@@ -142,4 +139,4 @@ class healthcare_dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of (B)
 
-        return item_name, item_offset, item_offset_order, item_target
+        return item_name, item_target

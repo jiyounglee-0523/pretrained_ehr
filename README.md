@@ -145,7 +145,9 @@ v3.3 : save model at best_auprc (not best_eval_loss)
 
 **v4.0**: cls_learnable, run.py fixed
 
-v4.1 : Added preprocessing files (Preprocessing_{1, 1_5, 2}.ipynb) 
+v4.1: Added preprocessing files (Preprocessing_{1, 1_5, 2}.ipynb) 
+
+v4.2: Added 4 BERTs (clinical, bio, blue, pubmed), changed BERT fintuning code to enable multi-GPU process 
 
 ## To-Do
 - work on multiple items

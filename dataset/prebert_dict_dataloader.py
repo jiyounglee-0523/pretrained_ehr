@@ -79,7 +79,9 @@ class bert_dict_dataset(Dataset):
 
             self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_id_dict.pkl'.format(source_file, item))
+            # check data path
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
             self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
@@ -89,8 +91,6 @@ class bert_dict_dataset(Dataset):
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
-
-        single_item_name = [re.sub(r'[.,/|!-?"\':;~()\[\]]', '', i) for i in single_item_name]
 
         def embed_dict(x):
             return self.id_dict[x]

@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--bert_induced', action='store_true')
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
-    parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
+    parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=256)
@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--n_epochs', type=int, default=500)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', type=str, default='clinical_bert')
+    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
@@ -34,7 +34,6 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     args.rnn_bidirection = False
-    args.bert_freeze = True
 
     # hyperparameter tuning
     args.dropout = 0.3
@@ -43,11 +42,17 @@ def main():
     args.lr = 1e-4
 
 
-    if args.bert_induced:
+    if args.bert_induced and args.bert_freeze:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
         from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
         print('bert induced')
-    else:
+
+    elif args.bert_induced and not args.bert_freeze:
+        from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
+        from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+        print('bert finetune')
+
+    elif not args.bert_induced:
         from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
         from trainer.base_trainer import Trainer
         print('single_rnn')

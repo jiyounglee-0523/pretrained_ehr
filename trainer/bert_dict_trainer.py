@@ -15,7 +15,7 @@ class bert_dict_Trainer():
         self.valid_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='learnable_cls_output', entity="pretrained_ehr", config=args, reinit=True)
+        wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
