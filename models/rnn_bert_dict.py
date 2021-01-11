@@ -14,15 +14,16 @@ class dict_post_RNN(nn.Module):
         self.hidden_dim = args.hidden_dim
         self.device = device
 
-        initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_cls_initialized.pkl'.format(args.source_file, args.item)), 'rb'))
+        initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
+                                                             '{}_{}_{}_{}_cls_initialized.pkl'.format(args.source_file, args.item, args.time_window, args.bert_model)), 'rb'))
         if args.source_file == 'mimic':
-            self.embed = nn.Embedding(545, 768, _weight=initial_embed_weight)
+            self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
         elif args.source_file == 'eicu':
-            self.embed = nn.Embedding(157, 768, _weight=initial_embed_weight)
+            self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
         elif args.source_file == 'both':
             raise NotImplementedError
 
-        self.compress_fc = nn.Linear(768, args.embedding_dim)
+        self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
         if args.rnn_model_type == 'gru':
             self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
@@ -39,7 +40,8 @@ class dict_post_RNN(nn.Module):
         lengths = lengths.squeeze(-1).long()
         x = x.long()
 
-        embedded = self.compress_fc(self.embed(x).to(self.device))
+        embedded = self.embed(x).to(self.device)
+        embedded = self.compress_fc(embedded)
 
         packed = pack_padded_sequence(embedded, lengths, batch_first=True, enforce_sorted=False)
         output, hidden = self.model(packed)
@@ -47,15 +49,16 @@ class dict_post_RNN(nn.Module):
 
         i = range(B)
 
-        if not self.bidirection:
-            output = output_seq[i, lengths - 1, :]
-        else:
-            forward_output = output_seq[i, lengths - 1, :self.hidden_dim]
-            backward_output = output_seq[i, 0, self.hidden_dim:]
-            output = torch.cat((forward_output, backward_output), dim=-1)
-            output = self.linear_1(output)
+        # if not self.bidirection:
+        output = output_seq[i, lengths - 1, :]
+        # else:
+        #     forward_output = output_seq[i, lengths - 1, :self.hidden_dim]
+        #     backward_output = output_seq[i, 0, self.hidden_dim:]
+        #     output = torch.cat((forward_output, backward_output), dim=-1)
+        #     output = self.linear_1(output)
 
         output = self.output_fc(output)
         return output
+
 
 

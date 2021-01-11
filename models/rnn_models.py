@@ -20,7 +20,8 @@ class RNNmodels(nn.Module):
 
         self.device = device
 
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.embedding = nn.Sequential(nn.Embedding(vocab_size, 768, padding_idx=0),
+                                       nn.Linear(768, embedding_dim))
         if args.rnn_model_type == 'gru':
             self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
         elif args.rnn_model_type == 'lstm':
@@ -43,13 +44,14 @@ class RNNmodels(nn.Module):
 
         i = range(x.size(0))
 
-        if not self.bidirection:    # unidirectional
-            output = output_seq[i, lengths -1, :]
-        else:
-            forward_output = output_seq[i, lengths -1, :self.hidden_dim]
-            backward_output = output_seq[:, 0, self.hidden_dim:]
-            output = torch.cat((forward_output, backward_output), dim=-1)
-            output = self.linear_1(output)
+        output = output_seq[i, lengths -1, :]
+
+        # for bidirection RNN but we are not using it
+        # else:
+        #     forward_output = output_seq[i, lengths -1, :self.hidden_dim]
+        #     backward_output = output_seq[:, 0, self.hidden_dim:]
+        #     output = torch.cat((forward_output, backward_output), dim=-1)
+        #     output = self.linear_1(output)
 
         output = self.output_fc(output)
         return output

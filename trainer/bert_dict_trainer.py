@@ -15,16 +15,16 @@ class bert_dict_Trainer():
         self.valid_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='learnable_cls_output', entity="pretrained_ehr", config=args, reinit=True)
+        wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
 
         file_target_name = args.target
         if file_target_name == 'los>3day':
-            file_target_name = 'los_3day'
+            file_target_name = 'los_3days'
         elif file_target_name == 'los>7day':
-            file_target_name = 'los_7day'
+            file_target_name = 'los_7days'
 
         filename = 'cls_learnable_{}'.format(args.seed)
 

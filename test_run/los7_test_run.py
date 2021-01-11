@@ -6,15 +6,16 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'test.py'
 
-device = 5
-few_shot_list = [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+device = 1
+#few_shot_list = [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+few_shot_list = [0.0]
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 for few_shot in few_shot_list:
     TRAINING_CONFIG = {
-        "bert_induced": True,
-        "source_file": 'mimic',
+        #"bert_induced": True,
+        "source_file": 'eicu',
         "test_file": 'eicu',
         "few_shot": few_shot,
         "target": 'los>7day',
