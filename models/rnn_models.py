@@ -20,8 +20,9 @@ class RNNmodels(nn.Module):
 
         self.device = device
 
-        self.embedding = nn.Sequential(nn.Embedding(vocab_size, 768, padding_idx=0),
-                                       nn.Linear(768, embedding_dim))
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        # self.embedding = nn.Sequential(nn.Embedding(vocab_size, 768, padding_idx=0),
+        #                                nn.Linear(768, embedding_dim))
         if args.rnn_model_type == 'gru':
             self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
         elif args.rnn_model_type == 'lstm':

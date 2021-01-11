@@ -6,7 +6,7 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-device = 4
+device = 6
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
@@ -16,7 +16,7 @@ for target in target_list:
    TRAINING_CONFIG = {
        "bert_induced": True,
        "source_file": 'mimic',
-       "item": 'lab',
+       "item": 'inf',
        "bert_freeze": True,
        "target": target,
        "bert_model": 'bio_clinical_bert',

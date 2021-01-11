@@ -29,7 +29,7 @@ class Trainer(nn.Module):
             file_target_name = 'los_7days'
 
         filename = 'trained_single_rnn_{}'.format(args.seed)
-        path = os.path.join(args.path, 'singleRNN', args.source_file, file_target_name, filename)
+        path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
         self.best_eval_path = path + '_best_auprc.pt'
