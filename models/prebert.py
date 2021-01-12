@@ -19,11 +19,12 @@ class ClinicalBERT(nn.Module):
         # print('pre-BERT data loaded DONE!')
         # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
 
-        _, cls_output = self.model(**x)   # cls_output shape (B * S, 768)
+        cls_output= self.model(**x)   # cls_output shape (B * S, 768)
+        output = cls_output[1]
         # print('pre-BERT forward calculation DOEN!')
         # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
 
-        return cls_output
+        return output
 
 
 class post_RNN(nn.Module):
@@ -32,7 +33,7 @@ class post_RNN(nn.Module):
         bert_model = args.bert_model
         self.criterion = criterion
 
-        if bert_model == 'clinical_bert':
+        if bert_model == 'bio_clinical_bert':
             self.prebert = ClinicalBERT(args.word_max_length)
 
         if args.bert_freeze == True:
@@ -63,7 +64,8 @@ class post_RNN(nn.Module):
 
         self.output_fc = nn.Linear(self.hidden_dim, output_size)
 
-    def forward(self, x, lengths, y):
+    def forward(self, x, lengths):
+        # y
         # goes through prebert
 
         if self.freeze:
@@ -93,11 +95,12 @@ class post_RNN(nn.Module):
         #     output = self.linear_1(output)
 
         output = self.output_fc(output)
-        loss = self.criterion(output, y.float().to(x.device))
+      #  loss = self.criterion(output, y.float().to(x.device))
 
-        return output, loss
+        return output #loss
 
-    def predict(self, x, lengths, y):
+    def predict(self, x, lengths):
+        # y
         # goes through prebert
 
         if self.freeze:

@@ -15,7 +15,7 @@ TO-DO: Implement Total (eicu and mimic combined)
 def bertinduced_get_dataloader(args, data_type='train'):
     if data_type == 'train':
         train_data = healthcare_dataset(args, data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'eval':
         eval_data = healthcare_dataset(args, data_type)
