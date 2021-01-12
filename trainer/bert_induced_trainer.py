@@ -76,7 +76,7 @@ class Bert_Trainer():
                 # print('DataLoader Done!')
                 # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
                 y_pred = self.model(item_name, seq_len)
-                loss = torch.mean(self.criterion(y_pred, item_target.float()))
+                loss = self.criterion(y_pred, item_target.float())
                 #y_pred, loss = self.model(item_name, seq_len, item_target)
                 #loss = torch.mean(loss)
                 # print('Forward Done!')
