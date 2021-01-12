@@ -16,7 +16,7 @@ class Bert_Trainer():
         self.valid_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='pretrained_ehr_team', entity="pretrained_ehr", config=args, reinit=True)
+        wandb.init(project="fine_tuning_test", entity="pretrained_ehr", config=args, reinit=True)
         args = wandb.config
 
         lr = args.lr
@@ -43,7 +43,9 @@ class Bert_Trainer():
             output_size = 1
             self.criterion = FocalLoss()
 
-        self.model = nn.DataParallel(post_RNN(args, output_size, self.criterion).to(self.device))
+        self.model = nn.DataParallel(post_RNN(args, output_size, self.criterion))
+        self.model.to(self.device)
+        #self.model = nn.DataParallel(post_RNN(args, output_size, self.criterion).to(self.device))
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
         self.early_stopping = EarlyStopping(patience = 30, verbose=True)
@@ -73,9 +75,10 @@ class Bert_Trainer():
                 item_target = item_target.to(self.device)
                 # print('DataLoader Done!')
                 # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
-
-                y_pred, loss = self.model(item_name, seq_len, item_target)
-                loss = torch.mean(loss)
+                y_pred = self.model(item_name, seq_len)
+                loss = torch.mean(self.criterion(y_pred, item_target.float()))
+                #y_pred, loss = self.model(item_name, seq_len, item_target)
+                #loss = torch.mean(loss)
                 # print('Forward Done!')
 
                 loss.backward()
@@ -147,7 +150,6 @@ class Bert_Trainer():
             for iter, sample in enumerate(self.valid_dataloader):
                 item_name, item_target, seq_len = sample
                 item_target = item_target.to(self.device)
-                item_name = item_name.to(self.device)
 
                 y_pred = self.model(item_name, seq_len)
                 loss = self.criterion(y_pred, item_target.float().to(self.device))
