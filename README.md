@@ -151,6 +151,13 @@ v4.1: Added preprocessing files (Preprocessing_{1, 1_5, 2}.ipynb)
 v4.2: Added 4 BERTs (clinical, bio, blue, pubmed), changed BERT fintuning code to enable multi-GPU process, output_dir path changed, 3 items (lab, med, inf can be implemented)
 
 v4.3: Revised nn.DataParallel for multi-gpu using / flatten warning should be fixed in future.
+
+v4.4: 
+
+​	test.py: debuged,  implemented partial parameter load
+
+​	main.py : implemented *lab_concat*
+
 ## To-Do
 - work on multiple items
 - work on ordering multiple item datasets

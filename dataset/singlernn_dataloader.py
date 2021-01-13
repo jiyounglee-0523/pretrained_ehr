@@ -32,7 +32,11 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         time_window = args.time_window
 
-        path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+        if args.concat:
+            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                            '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, max_length, args.seed))
+        elif not args.concat:
+            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
                             '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
         data = pickle.load(open(path, 'rb'))
 

@@ -16,8 +16,10 @@ class Trainer(nn.Module):
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
         self.device = device
+        self.debug = args.debug
 
-        wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
+        if not self.debug:
+            wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -28,7 +30,10 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        filename = 'trained_single_rnn_{}'.format(args.seed)
+        if args.concat:
+            filename = 'trained_single_rnn_{}_concat'
+        elif args.conat:
+            filename = 'trained_single_rnn_{}'.format(args.seed)
         path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
@@ -37,16 +42,16 @@ class Trainer(nn.Module):
 
         if args.source_file == 'mimic':
             if args.item == 'lab':
-                vocab_size = 363
+                vocab_size = 7182 if args.concat else 363
             elif args.item == 'med':
-                vocab_size = 1934
+                vocab_size = 2772 if args.concat else 1934
             elif args.item == 'inf':
                 vocab_size = 334
         elif args.source_file == 'eicu':
             if args.item == 'lab':
-                vocab_size = 137
+                vocab_size = 13332 if args.concat else 137
             elif args.item == 'med':
-                vocab_size = 955
+                vocab_size = 3883 if args.concat else 955
             elif args.item == 'inf':
                 vocab_size = 525
         else:
@@ -115,21 +120,23 @@ class Trainer(nn.Module):
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
 
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': best_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc,
-                            'epochs': n_epoch}, self.best_eval_path)
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.best_eval_path)
 
-                print('Model parameter saved at epoch {}'.format(n_epoch))
+                    print('Model parameter saved at epoch {}'.format(n_epoch))
 
-            wandb.log({'train_loss': avg_train_loss,
-                       'train_auroc': auroc_train,
-                       'train_auprc': auprc_train,
-                       'eval_loss': avg_eval_loss,
-                       'eval_auroc': auroc_eval,
-                       'eval_auprc': auprc_eval})
+            if not self.debug:
+                wandb.log({'train_loss': avg_train_loss,
+                           'train_auroc': auroc_train,
+                           'train_auprc': auprc_train,
+                           'eval_loss': avg_eval_loss,
+                           'eval_auroc': auroc_eval,
+                           'eval_auprc': auprc_eval})
 
             print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
@@ -137,12 +144,13 @@ class Trainer(nn.Module):
             self.early_stopping(auprc_eval)
             if self.early_stopping.early_stop:
                 print('Early stopping')
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
-                            'auroc': auroc_eval,
-                            'auprc': auprc_eval,
-                            'epochs': n_epoch}, self.final_path)
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': avg_eval_loss,
+                                'auroc': auroc_eval,
+                                'auprc': auprc_eval,
+                                'epochs': n_epoch}, self.final_path)
                 break
 
 

@@ -12,7 +12,6 @@ import pickle
 import random
 import wandb
 import tqdm
-import re
 
 from models.rnn_bert_dict import *
 from models.rnn_models import *
@@ -235,7 +234,7 @@ class Tester(nn.Module):
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
         target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
-        target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
+        target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
 
         self.best_target_path = target_path + '_best_auprc.pt'
@@ -399,7 +398,7 @@ def main():
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
-    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
+    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
     parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str, default='med')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
@@ -415,15 +414,13 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=0)
-    parser.add_argument('--seed', type=int)
+    parser.add_argument('--device_number', type=int, default=6)
+    parser.add_argument('--debug', action='store_true')
 
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    args.debug = True
 
     args.rnn_bidirection = False
 

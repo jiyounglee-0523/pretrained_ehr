@@ -14,8 +14,10 @@ class bert_dict_Trainer():
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
         self.device = device
+        self.debug = args.debug
 
-        wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
+        if not self.debug:
+            wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -26,7 +28,10 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+        if args.concat:
+            filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+        elif not args.concat:
+            filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
@@ -94,20 +99,22 @@ class bert_dict_Trainer():
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': best_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc,
-                            'epochs': n_epoch}, self.best_eval_path)
-                print('Model parameter saved at epoch {}'.format(n_epoch))
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.best_eval_path)
+                    print('Model parameter saved at epoch {}'.format(n_epoch))
 
-            wandb.log({'train_loss': avg_train_loss,
-                       'train_auroc': auroc_train,
-                       'train_auprc': auprc_train,
-                       'eval_loss': avg_eval_loss,
-                       'eval_auroc': auroc_eval,
-                       'eval_auprc': auprc_eval})
+            if not self.debug:
+                wandb.log({'train_loss': avg_train_loss,
+                           'train_auroc': auroc_train,
+                           'train_auprc': auprc_train,
+                           'eval_loss': avg_eval_loss,
+                           'eval_auroc': auroc_eval,
+                           'eval_auprc': auprc_eval})
 
             print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
@@ -116,12 +123,13 @@ class bert_dict_Trainer():
 
             if self.early_stopping.early_stop:
                 print('Early stopping')
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc,
-                            'epochs': n_epoch}, self.final_path)
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': avg_eval_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.final_path)
                 break
 
     def evaluation(self):
