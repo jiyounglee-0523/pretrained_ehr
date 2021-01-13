@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int)
+    parser.add_argument('--device_number', type=str)
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -75,6 +75,9 @@ def main():
         torch.backends.cudnn.deterministic = True
 
         args.seed = seed
+
+        print('seed_number', args.seed)
+
 
         # change the train_loader, valid_loader (Dataset)   valid_index should be changed!
         train_loader = get_dataloader(args=args, data_type='train')
