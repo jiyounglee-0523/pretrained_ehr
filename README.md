@@ -156,7 +156,7 @@ v4.4:
 
 ​	test.py: debuged,  implemented partial parameter load
 
-​	main.py : implemented *lab_concat*
+​	main.py : implemented *lab_concat*, added parser (concat, debug)
 
 ## To-Do
 - work on multiple items

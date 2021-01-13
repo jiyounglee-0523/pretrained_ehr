@@ -31,8 +31,8 @@ class Trainer(nn.Module):
             file_target_name = 'los_7days'
 
         if args.concat:
-            filename = 'trained_single_rnn_{}_concat'
-        elif args.conat:
+            filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+        elif not args.concat:
             filename = 'trained_single_rnn_{}'.format(args.seed)
         path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
