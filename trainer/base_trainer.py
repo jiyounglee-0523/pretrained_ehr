@@ -17,7 +17,7 @@ class Trainer(nn.Module):
         self.eval_dataloader = valid_dataloader
         self.device = device
 
-        wandb.init(project='learnable_cls_output', entity="pretrained_ehr", config=args, reinit=True)
+        wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -36,9 +36,19 @@ class Trainer(nn.Module):
         self.final_path = path + '_final.pt'
 
         if args.source_file == 'mimic':
-            vocab_size = 545
+            if args.item == 'lab':
+                vocab_size = 363
+            elif args.item == 'med':
+                vocab_size = 1934
+            elif args.item == 'inf':
+                vocab_size = 334
         elif args.source_file == 'eicu':
-            vocab_size = 157
+            if args.item == 'lab':
+                vocab_size = 137
+            elif args.item == 'med':
+                vocab_size = 955
+            elif args.item == 'inf':
+                vocab_size = 525
         else:
             raise NotImplementedError
 

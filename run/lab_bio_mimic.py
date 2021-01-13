@@ -16,7 +16,7 @@ for target in target_list:
    TRAINING_CONFIG = {
        "bert_induced": True,
        "source_file": 'mimic',
-       "item": 'inf',
+       "item": 'lab',
        "bert_freeze": True,
        "target": target,
        "bert_model": 'bio_bert',

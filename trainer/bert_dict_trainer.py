@@ -26,9 +26,9 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        filename = 'cls_learnable_{}'.format(args.seed)
+        filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
-        path = os.path.join(args.path, 'cls_learnable', args.source_file, file_target_name, filename)
+        path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
         self.best_eval_path = path + '_best_auprc.pt'
