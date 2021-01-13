@@ -12,7 +12,6 @@ import pickle
 import random
 import wandb
 import tqdm
-import re
 
 from models.rnn_bert_dict import *
 from models.rnn_models import *
@@ -57,11 +56,11 @@ class Few_Shot_Dataset(Dataset):
         else:
             few_shot = args.few_shot
             if few_shot == 0.0 or few_shot == 1.0:
-                path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
-                                                                                                 args.seed)
+                                                                                                 args.seed))
             else:
-                path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100))
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -71,9 +70,10 @@ class Few_Shot_Dataset(Dataset):
             elif test_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_id, self.item_offset, self.item_offset_order, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_id, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', '{}_{}_id_dict.pkl'.format(test_file, item))
+
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
             self.word2embed = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
@@ -82,8 +82,8 @@ class Few_Shot_Dataset(Dataset):
     def __getitem__(self, item):
         # RNN
         single_item_id = self.item_id[item]
-        single_item_offset = self.item_offset[item]
-        single_item_offset_order = self.item_offset_order[item]
+        # single_item_offset = self.item_offset[item]
+        # single_item_offset_order = self.item_offset_order[item]
         single_target = self.item_target[item]
         single_length = torch.LongTensor([torch.max(torch.nonzero(single_item_id.data)) + 1])
 
@@ -98,10 +98,9 @@ class Few_Shot_Dataset(Dataset):
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
 
-        single_item_name = [re.sub(r'[.,/|!-?"\':;~()\[\]]', '', i) for i in single_item_name]
-
         def embed_dict(x):
             return self.word2embed[x]
+
         embedding = list(map(embed_dict, single_item_name))  # list with length seq_len
         embedding = torch.Tensor(embedding)
 
@@ -144,17 +143,20 @@ class Few_Shot_Dataset(Dataset):
         elif data_type == 'test':
             cohort = cohort[cohort[target_fold] == 0]
 
+        # drop with null item
+        cohort = cohort[cohort.astype(str)[name_window] != '[]']
+
         # pad
         item_name = cohort[name_window].values.tolist()
 
         item_id = cohort[id_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         item_id = pad_sequence(item_id, batch_first=True)
 
-        item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
-        item_offset_order = pad_sequence(item_offset_order, batch_first=True)
-
-        item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
-        item_offset = pad_sequence(item_offset, batch_first=True)
+        # item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        # item_offset_order = pad_sequence(item_offset_order, batch_first=True)
+        #
+        # item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        # item_offset = pad_sequence(item_offset, batch_first=True)
 
         # target
         if target == 'dx_depth1_unique':
@@ -163,7 +165,7 @@ class Few_Shot_Dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist()) # shape of (B)
 
-        return item_name, item_id, item_offset, item_offset_order, item_target
+        return item_name, item_id, item_target
 
 
 ################################################################################
@@ -176,8 +178,10 @@ class Tester(nn.Module):
         self.valid_dataloader = valid_dataloader
         self.test_dataloader = test_dataloader
         self.device = device
+        self.debug = args.debug
 
-        wandb.init(project='test_learnable_cls_output', entity='pretrained_ehr', config=args, reinit=True)
+        if not self.debug:
+            wandb.init(project='test_among_berts', entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -200,7 +204,7 @@ class Tester(nn.Module):
             model_directory = 'cls_learnable'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
             print('bert freeze')
-            filename = 'cls_learnable_{}'.format(args.seed)
+            filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
@@ -208,20 +212,29 @@ class Tester(nn.Module):
         elif not args.bert_induced:
             model_directory = 'singleRNN'
             if args.source_file == 'mimic':
-                vocab_size = 545
+                if args.item == 'lab':
+                    vocab_size = 545
+                elif args.item == 'med':
+                    vocab_size = 1934
+                elif args.item == 'inf':
+                    vocab_size = 334
             elif args.source_file == 'eicu':
-                vocab_size = 157
-            else:
-                raise NotImplementedError
+                if args.item == 'lab':
+                    vocab_size = 157
+                elif args.item == 'med':
+                    vocab_size = 955
+                elif args.item == 'inf':
+                    vocab_size = 525
+
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
             filename = 'trained_single_rnn_{}'.format(args.seed)
 
-        self.source_path = os.path.join(args.path, model_directory, args.source_file, file_target_name, filename)
+        self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
-        target_filename = 'few_shot{}_from{}_to{}_seed{}'.format(args.few_shot, args.source_file, args.test_file,seed)
-        target_path = os.path.join(args.path, model_directory, args.test_file, file_target_name, target_filename)
+        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+        target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
 
         self.best_target_path = target_path + '_best_auprc.pt'
@@ -232,7 +245,10 @@ class Tester(nn.Module):
         best_eval_path = self.source_path + '_best_auprc.pt'
         print('Load Model from {}'.format(best_eval_path))
         ckpt = torch.load(best_eval_path)
-        self.model.load_state_dict(ckpt['model_state_dict'])
+        pretrained_dict = ckpt['model_state_dict']
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}    # do not load embedding weight (singleRNN)
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embed' in k}     # do not load embedding weight (bert-induced)
+        self.model.load_state_dict(pretrained_dict, strict=False)
         print("Model successfully loaded!")
         print('Model will be saved in {}'.format(self.best_target_path))
 
@@ -280,36 +296,36 @@ class Tester(nn.Module):
                 best_loss = avg_eval_loss
                 best_auroc = auroc_eval
                 best_auprc = auprc_eval
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.best_target_path)
+                    print('Model parameter saved at epoch {}'.format(n_epoch))
 
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': best_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc,
-                            'epochs': n_epoch}, self.best_target_path)
-                print('Model parameter saved at epoch {}'.format(n_epoch))
+            if not self.debug:
+                wandb.log({'train_loss': avg_train_loss,
+                           'train_auroc': auroc_train,
+                           'train_auprc': auprc_train,
+                           'eval_loss': avg_eval_loss,
+                           'eval_auroc': auroc_eval,
+                           'eval_auprc': auprc_eval})
 
-            wandb.log({'train_loss': avg_train_loss,
-                       'train_auroc': auroc_train,
-                       'train_auprc': auprc_train,
-                       'eval_loss': avg_eval_loss,
-                       'eval_auroc': auroc_eval,
-                       'eval_auprc': auprc_eval})
-
-            print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train,
-                                                                                         auprc_train))
-            print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval,
-                                                                                         auprc_eval))
+            print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
+            print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
             self.early_stopping(auprc_eval)
             if self.early_stopping.early_stop:
                 print('Early stopping')
-                torch.save({'model_state_dict': self.model.state_dict(),
-                            'optimizer_state_dict': self.optimizer.state_dict(),
-                            'loss': avg_eval_loss,
-                            'auroc': best_auroc,
-                            'auprc': best_auprc,
-                            'epochs': n_epoch}, self.final_path)
+                if not self.debug:
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': avg_eval_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.final_path)
 
                 break
 
@@ -365,9 +381,10 @@ class Tester(nn.Module):
             auroc_test = roc_auc_score(truths_test, preds_test)
             auprc_test = average_precision_score(truths_test, preds_test)
 
-            wandb.log({'test_loss': avg_test_loss,
-                       'test_auroc': auroc_test,
-                       'test_auprc': auprc_test})
+            if not self.debug:
+                wandb.log({'test_loss': avg_test_loss,
+                           'test_auroc': auroc_test,
+                           'test_auprc': auprc_test})
 
             print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
                                                                                      auprc_test))
@@ -378,11 +395,11 @@ class Tester(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='both')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
-    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='dx_depth1_unique')
-    parser.add_argument('--item', choices=['lab', 'diagnosis', 'chartevent', 'medication', 'infusion'], type=str, default='lab')
+    parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
+    parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str, default='med')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=256)
@@ -393,12 +410,12 @@ def main():
     parser.add_argument('--n_epochs', type=int, default=500)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', type=str, default='clinical_bert')
+    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str, default='bio_bert')
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=0)
-    parser.add_argument('--seed', type=int)
+    parser.add_argument('--device_number', type=int, default=6)
+    parser.add_argument('--debug', action='store_true')
 
     args = parser.parse_args()
 
@@ -406,7 +423,6 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     args.rnn_bidirection = False
-    args.bert_freeze = True
 
     if args.source_file == args.test_file:
         assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"
@@ -426,6 +442,7 @@ def main():
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
 
         args.seed = seed

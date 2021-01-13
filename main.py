@@ -28,6 +28,9 @@ def main():
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=str)
+    parser.add_argument('--notes', type=str)
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--concat', action='store_true', help='only for lab now')
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -71,6 +74,7 @@ def main():
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # if use multi-GPU
         torch.backends.cudnn.deterministic = True
 
         args.seed = seed

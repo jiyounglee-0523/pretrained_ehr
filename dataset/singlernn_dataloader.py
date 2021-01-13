@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
-
 import numpy as np
+import os
 
 import pickle
 
@@ -32,8 +32,12 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         time_window = args.time_window
 
-
-        path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed)
+        if args.concat:
+            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                            '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, max_length, args.seed))
+        elif not args.concat:
+            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                            '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
         data = pickle.load(open(path, 'rb'))
 
         # change column name
@@ -93,6 +97,9 @@ class eicu_dataset(Dataset):
             cohort = cohort[cohort[target_fold] == 2]
         elif data_type == 'test':
             cohort = cohort[cohort[target_fold] == 0]
+
+        # drop with null item
+        cohort = cohort[cohort.astype(str)[id_window] != '[]']
 
         # pad
         item_id = cohort[id_window].apply(lambda x: torch.Tensor(x)).values.tolist()
