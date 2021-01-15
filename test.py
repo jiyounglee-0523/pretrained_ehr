@@ -56,11 +56,20 @@ class Few_Shot_Dataset(Dataset):
         else:
             few_shot = args.few_shot
             if few_shot == 0.0 or few_shot == 1.0:
-                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
+                if args.concat:
+                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                                        '{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window,
+                                                                    item, self.max_length,
+                                                                    args.seed))
+                elif not args.concat:
+                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
                                                                                                  args.seed))
             else:
-                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                if args.concat:
+                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                elif not args.concat:
+                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -72,8 +81,10 @@ class Few_Shot_Dataset(Dataset):
 
             self.item_name, self.item_id, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+            if args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+            elif not args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
             self.word2embed = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
@@ -202,38 +213,52 @@ class Tester(nn.Module):
 
         if args.bert_induced and args.bert_freeze:
             model_directory = 'cls_learnable'
-            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device).to(device)
+            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
             print('bert freeze')
-            filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+            if args.concat:
+                filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+            elif not args.concat:
+                filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
             print('bert finetuning')
+            ## model name!!!
+
         elif not args.bert_induced:
             model_directory = 'singleRNN'
-            if args.source_file == 'mimic':
+            if args.test_file == 'mimic':
                 if args.item == 'lab':
-                    vocab_size = 545
+                    vocab_size = 7182 if args.concat else 363
                 elif args.item == 'med':
-                    vocab_size = 1934
+                    vocab_size = 2772 if args.concat else 1934
                 elif args.item == 'inf':
                     vocab_size = 334
-            elif args.source_file == 'eicu':
+            elif args.test_file == 'eicu':
                 if args.item == 'lab':
-                    vocab_size = 157
+                    vocab_size = 13332 if args.concat else 137
                 elif args.item == 'med':
-                    vocab_size = 955
+                    vocab_size = 3883 if args.concat else 955
                 elif args.item == 'inf':
                     vocab_size = 525
 
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
-            filename = 'trained_single_rnn_{}'.format(args.seed)
+
+            if args.concat:
+                filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+            elif not args.concat:
+                filename = 'trained_single_rnn_{}'.format(args.seed)
 
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
-        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+        if args.concat:
+            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
+                                                                             args.test_file, args.bert_model, seed)
+        elif not args.concat:
+            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
         target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
 
@@ -245,11 +270,17 @@ class Tester(nn.Module):
         best_eval_path = self.source_path + '_best_auprc.pt'
         print('Load Model from {}'.format(best_eval_path))
         ckpt = torch.load(best_eval_path)
-        pretrained_dict = ckpt['model_state_dict']
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}    # do not load embedding weight (singleRNN)
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embed' in k}     # do not load embedding weight (bert-induced)
-        self.model.load_state_dict(pretrained_dict, strict=False)
-        print("Model successfully loaded!")
+        if args.source_file != args.test_file:
+            pretrained_dict = ckpt['model_state_dict']
+            pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}    # do not load embedding weight (singleRNN)
+            pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embed' in k}     # do not load embedding weight (bert-induced)
+            self.model.load_state_dict(pretrained_dict, strict=False)
+            print("Model partially loaded!")
+
+        elif args.source_file == args.test_file:
+            self.model.load_state_dict(ckpt['model_state_dict'])
+            print("Model fully loaded!")
+
         print('Model will be saved in {}'.format(self.best_target_path))
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -416,6 +447,8 @@ def main():
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=int, default=6)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--concat', action='store_true')
+
 
     args = parser.parse_args()
 

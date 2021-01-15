@@ -46,7 +46,7 @@ class bert_dict_Trainer():
             output_size = 1
             self.criterion = FocalLoss()
 
-        self.model = dict_post_RNN(args, output_size, device).to(self.device)
+        self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
         self.early_stopping = EarlyStopping(patience=30, verbose=True)
@@ -57,13 +57,6 @@ class bert_dict_Trainer():
         best_loss = float('inf')
         best_auroc = 0.0
         best_auprc = 0.0
-
-        # if os.path.exists(self.best_eval_path):
-        #     ckpt = torch.load(self.best_eval_path)
-        #     self.model.load_state_dict(ckpt['model_state_dict'])
-        #     best_loss = ckpt['loss']
-        #     best_auroc = ckpt['auroc']
-        #     best_auprc = ckpt['auprc']
 
         for n_epoch in range(self.n_epochs + 1):
             preds_train = []

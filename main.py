@@ -31,6 +31,8 @@ def main():
     parser.add_argument('--notes', type=str)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true', help='only for lab now')
+    parser.add_argument('--seed', type=int)
+    parser.add_argument('--separate_overlapping_codes', action='store_true')
     args = parser.parse_args()
 
     # args.device_number = 6

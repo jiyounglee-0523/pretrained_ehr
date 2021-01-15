@@ -18,7 +18,7 @@ def singlernn_get_dataloader(args, data_type = 'train'):
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'test':
-        test_data =  eicu_dataset(args, data_type)
+        test_data = eicu_dataset(args, data_type)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
 
     return dataloader

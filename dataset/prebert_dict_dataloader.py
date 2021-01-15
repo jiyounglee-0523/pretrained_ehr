@@ -35,14 +35,23 @@ class bert_dict_dataset(Dataset):
         self.max_length = args.max_length
         time_window = args.time_window
         self.word_max_length = args.word_max_length
+        self.separate_overlapping_codes = args.separate_overlapping_codes
 
         if args.source_file == 'both':
-            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
-                                'mimic_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed))
+            if args.concat:
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                                'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
+            elif not args.concat:
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                                'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
             mimic = pickle.load(open(path, 'rb'))
 
-            path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
-                                'eicu_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed))
+            if args.concat:
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                                    'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
+            elif not args.concat:
+                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                                'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
             eicu = pickle.load(open(path, 'rb'))
 
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
@@ -59,15 +68,14 @@ class bert_dict_dataset(Dataset):
             else:
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
+            if args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
+            elif not args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
 
-            mimic_vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', 'mimic_{}_word2embed.pkl'.format(args.item))
-            mimic_word2embed = pickle.load(open(mimic_vocab_path, 'rb'))
-
-            eicu_vocab_path = os.path.join('/home/jylee/data/pretrained_ehr', 'eicu_{}_word2embed.pkl'.format(args.item))
-            eicu_word2embed = pickle.load(open(eicu_vocab_path, 'rb'))
-
-            mimic_word2embed.update(eicu_word2embed)
-            self.word2embed = mimic_word2embed
+            self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
         else:
             if args.concat:
@@ -155,6 +163,7 @@ class bert_dict_dataset(Dataset):
 
         # pad
         item_name = cohort[name_window].values.tolist()
+        # tokenize
 
         ## offset order? offset?
 

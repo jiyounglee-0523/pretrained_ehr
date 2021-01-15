@@ -6,7 +6,7 @@ import pickle
 import os
 
 class dict_post_RNN(nn.Module):
-    def __init__(self, args, output_size, device, n_layers=1):
+    def __init__(self, args, output_size, device, target_file, n_layers=1):
         super().__init__()
         dropout = args.dropout
         self.bidirection = args.rnn_bidirection
@@ -16,16 +16,12 @@ class dict_post_RNN(nn.Module):
 
         if args.concat:
             initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
-                                                             '{}_{}_{}_{}_concat_cls_initialized.pkl'.format(args.source_file, args.item, args.time_window, args.bert_model)), 'rb'))
+                                                             '{}_{}_{}_{}_concat_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
         elif not args.concat:
             initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
-                                                             '{}_{}_{}_{}_cls_initialized.pkl'.format(args.source_file, args.item, args.time_window, args.bert_model)), 'rb'))
-        if args.source_file == 'mimic':
-            self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
-        elif args.source_file == 'eicu':
-            self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
-        elif args.source_file == 'both':
-            raise NotImplementedError
+                                                             '{}_{}_{}_{}_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
+
+        self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
 
         self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
