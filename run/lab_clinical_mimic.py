@@ -10,7 +10,8 @@ device = 6
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
-target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
+target_list = ['readmission', 'mortality','los>3day']
+
 
 for target in target_list:
    TRAINING_CONFIG = {

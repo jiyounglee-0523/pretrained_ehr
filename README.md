@@ -158,9 +158,12 @@ v4.4:
 
 ​	main.py : implemented *lab_concat*, added parser (concat, debug)
 
+**v5.0**
+
+​	test.py: few_shot - partially load parameters (treat differently for overlapping codes)
+
+​	main.py: both - treat the same for overlapping codes
+
 ## To-Do
 - work on multiple items
-- work on ordering multiple item datasets
-- [Dataset] check if lengths of padded *item_id* and *item_offset_order* are the same.
-
-- work on both (cls_learnable)
+- experiment with training dataset size dependent
