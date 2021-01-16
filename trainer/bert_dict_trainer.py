@@ -28,10 +28,17 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.concat:
-            filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
-        elif not args.concat:
-            filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+        if args.cls_freeze:
+            if args.concat:
+                filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+            elif not args.concat:
+                filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+
+        elif not args.cls_freeze:
+            if args.concat:
+                filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+            elif not args.concat:
+                filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))

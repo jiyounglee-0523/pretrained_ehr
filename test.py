@@ -448,6 +448,7 @@ def main():
     parser.add_argument('--device_number', type=int, default=6)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true')
+    parser.add_argument('--cls_freeze', action='store_true')
 
 
     args = parser.parse_args()

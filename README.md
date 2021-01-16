@@ -164,6 +164,8 @@ v4.4:
 
 ​	main.py: both - treat the same for overlapping codes
 
+v5.1 main.py: cls_fixed, all
+
 ## To-Do
 - work on multiple items
 - experiment with training dataset size dependent
