@@ -13,6 +13,7 @@ class dict_post_RNN(nn.Module):
         num_directions = 2 if self.bidirection else 1
         self.hidden_dim = args.hidden_dim
         self.device = device
+        self.cls_freeze = args.cls_freeze
 
         if args.concat:
             initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
@@ -40,7 +41,12 @@ class dict_post_RNN(nn.Module):
         lengths = lengths.squeeze(-1).long()
         x = x.long()
 
-        embedded = self.embed(x).to(self.device)
+        if self.cls_freeze:
+            with torch.no_grad():
+                embedded = self.embed(x).to(self.device)
+
+        elif not self.cls_freeze:
+            embedded = self.embed(x).to(self.device)
         embedded = self.compress_fc(embedded)
 
         packed = pack_padded_sequence(embedded, lengths, batch_first=True, enforce_sorted=False)

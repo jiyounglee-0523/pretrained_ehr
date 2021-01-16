@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--bert_induced', action='store_true')
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
-    parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str, default='lab')
+    parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=256)
@@ -25,13 +25,13 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
+    parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)    # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=str)
     parser.add_argument('--notes', type=str)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true', help='only for lab now')
-    parser.add_argument('--seed', type=int)
     parser.add_argument('--separate_overlapping_codes', action='store_true')
     args = parser.parse_args()
 
@@ -62,10 +62,13 @@ def main():
         from trainer.base_trainer import Trainer
         print('single_rnn')
 
-    if args.time_window == '12':
-        assert args.max_length == '150', "time_window of 12 should have max length of 150!"
-    elif args.time_window == '24':
-        assert args.max_length == '200', "time_window of 24 should have max length of 200!"
+    # if args.time_window == '12':
+    #     assert args.max_length == '150', "time_window of 12 should have max length of 150!"
+    # elif args.time_window == '24':
+    #     assert args.max_length == '200', "time_window of 24 should have max length of 200!"
+
+    if args.item == 'all':
+        assert args.max_length == '300', 'when using all items, max length should be 300'
 
     mp.set_sharing_strategy('file_system')
 
