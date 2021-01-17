@@ -42,18 +42,18 @@ class Trainer(nn.Module):
 
         if args.source_file == 'mimic':
             if args.item == 'lab':
-                vocab_size = 7182 if args.concat else 363
+                vocab_size = 5110 if args.concat else 359
             elif args.item == 'med':
-                vocab_size = 2772 if args.concat else 1934
+                vocab_size = 2211 if args.concat else 1535
             elif args.item == 'inf':
-                vocab_size = 334
+                vocab_size = 485
         elif args.source_file == 'eicu':
             if args.item == 'lab':
-                vocab_size = 13332 if args.concat else 137
+                vocab_size = 9659 if args.concat else 134
             elif args.item == 'med':
-                vocab_size = 3883 if args.concat else 955
+                vocab_size = 2692 if args.concat else 1283
             elif args.item == 'inf':
-                vocab_size = 525
+                vocab_size = 495
         else:
             raise NotImplementedError
 

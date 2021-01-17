@@ -166,6 +166,12 @@ v4.4:
 
 v5.1 main.py: cls_fixed, all
 
+v5.2
+
+​	test.py : implemented testing cls_freeze
+
+​	training_datasize_dependent.py : training datasetsize dependent code
+
 ## To-Do
 - work on multiple items
 - experiment with training dataset size dependent

@@ -211,14 +211,23 @@ class Tester(nn.Module):
             file_target_name = 'los_7days'
 
 
-        if args.bert_induced and args.bert_freeze:
+        if args.bert_induced and args.bert_freeze and not args.cls_freeze:
             model_directory = 'cls_learnable'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
-            print('bert freeze')
+            print('bert freeze, cls_learnable')
             if args.concat:
                 filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
                 filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+
+        elif args.bert_induced and args.bert_freeze and args.cls_freeze:
+            model_directory = 'cls_learnable'
+            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
+            print('bert freeze, cls_freeze')
+            if args.concat:
+                filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+            elif not args.concat:
+                filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
@@ -242,7 +251,6 @@ class Tester(nn.Module):
                     vocab_size = 3883 if args.concat else 955
                 elif args.item == 'inf':
                     vocab_size = 525
-
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
