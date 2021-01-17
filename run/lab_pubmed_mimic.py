@@ -6,7 +6,7 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-device = 0
+device = 3
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
@@ -22,7 +22,7 @@ for target in target_list:
        "target": target,
        "bert_model": 'pubmed_bert',
        "device_number": device,
-       "concat": True
+       "concat": True,
    }
 
    TRAINING_CONFIG_LIST = ["--{}".format(k) if (isinstance(v, bool) and (v)) else "--{}={}".format(k,v) for (k,v) in list(TRAINING_CONFIG.items())]
