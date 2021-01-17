@@ -172,6 +172,8 @@ v5.2
 
 ​	training_datasize_dependent.py : training datasetsize dependent code
 
+v5.3  singlernn_dataloader.py : implemented both
+
 ## To-Do
 - work on multiple items
 - experiment with training dataset size dependent
