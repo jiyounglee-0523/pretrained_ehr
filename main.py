@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--n_epochs', type=int, default=500)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str)
+    parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
