@@ -16,8 +16,9 @@ for target in target_list:
    TRAINING_CONFIG = {
        "bert_induced": True,
        "source_file": 'mimic',
-       "item": 'med',
+       "item": 'all',
        "bert_freeze": True,
+       "max_length": 300,
        "target": target,
        "bert_model": 'bio_clinical_bert',
        "device_number": device,
