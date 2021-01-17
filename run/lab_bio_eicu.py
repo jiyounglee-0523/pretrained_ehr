@@ -6,7 +6,7 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-device = 3
+device = 1
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 

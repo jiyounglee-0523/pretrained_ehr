@@ -248,7 +248,7 @@ class Tester(nn.Module):
                 if args.item == 'lab':
                     vocab_size = 9659 if args.concat else 134
                 elif args.item == 'med':
-                    vocab_size = 2692 if args.concat else 1283
+                    vocab_size = 2693 if args.concat else 1283
                 elif args.item == 'inf':
                     vocab_size = 495
 
