@@ -51,8 +51,8 @@ class eicu_dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            mimic_item_id, mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
-            eicu_item_id, eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
 
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
@@ -62,17 +62,6 @@ class eicu_dataset(Dataset):
                 self.item_target = mimic_item_target
             else:
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
-
-            if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                          '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window,
-                                                                                     args.bert_model))
-            elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                          '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window,
-                                                                              args.bert_model))            ################### bert model?
-
-            self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
         else:
             if args.concat:
@@ -89,7 +78,18 @@ class eicu_dataset(Dataset):
             elif source_file == 'eicu':
                 data = data.rename({'patientunitstayid':'ID'}, axis='columns')
 
-            self.item_id, self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+
+        if args.concat:
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window,
+                                                                                 args.bert_model))
+        elif not args.concat:
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window,
+                                                                          args.bert_model))  ################### bert model?
+
+        self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
 
     def __len__(self):
@@ -100,31 +100,28 @@ class eicu_dataset(Dataset):
         # single_item_offset_order = self.item_offset_order[item]
         single_target = self.item_target[item]
 
-        if self.target == 'dx_depth1_unique':
+        if single_target == 'dx_depth1_unique':
             single_target = [int(j) for j in single_target]
             target_list = torch.Tensor(single_target).long()
 
             single_target = torch.zeros(18)
             single_target[target_list - 1] = 1  # shape of 18
 
-        if self.source_file == 'both':
-            single_item_name = self.item_name[item]
-            seq_len = torch.Tensor([len(single_item_name)])
-            embedding = []
 
-            def embed_dict(x):
-                return self.id_dict[x]
-            embedding = list(map(embed_dict, single_item_name))
-            embedding = torch.Tensor(embedding)
+        single_item_name = self.item_name[item]
+        seq_len = torch.Tensor([len(single_item_name)])
+        embedding = []
 
-            padding = torch.zeros(int(self.max_length) - embedding.size(0))
-            embedding = torch.cat((embedding, padding), dim=-1)
-            return embedding, single_target, seq_len
+        def embed_dict(x):
+            return self.id_dict[x]
+        embedding = list(map(embed_dict, single_item_name))
+        embedding = torch.Tensor(embedding)
 
-        else:
-            single_item_id = self.item_id[item]
-            single_length = torch.LongTensor([torch.max(torch.nonzero(single_item_id.data)) + 1])
-            return single_item_id, single_target, single_length
+        padding = torch.zeros(int(self.max_length) - embedding.size(0))
+        embedding = torch.cat((embedding, padding), dim=-1)
+        return embedding, single_target, seq_len
+
+
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         # time window
@@ -174,7 +171,7 @@ class eicu_dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist())     # shape of (B)
 
-        return item_id, item_name, item_target
+        return item_name, item_target
 
 
 

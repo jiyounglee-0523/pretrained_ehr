@@ -2,14 +2,14 @@ import subprocess
 import os
 
 # Configuration before run
-device = 1
+device = 3
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-source_file_list = ['mimic']
+source_file_list = ['mimic', 'eicu', 'both']
 target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
 
 for source_file in source_file_list:
@@ -17,7 +17,9 @@ for source_file in source_file_list:
         TRAINING_CONFIG = {
             "source_file": source_file,
             "target": target,
-            "item": 'med',
+            "item": 'lab',
+            "max_length": 150,
+            "bert_model": 'pubmed_bert',
             "bert_freeze": True,
             "device_number": device,
             "concat": True,

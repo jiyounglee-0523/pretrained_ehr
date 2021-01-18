@@ -76,18 +76,18 @@ class DataSize_Trainer():
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.source_file).to(device)
             print('bert freeze, cls_learnable')
             if args.concat:
-                filename = 'cls_learnable_{}_{}_fewshot{}_concat'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_learnable_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
             elif not args.concat:
-                filename = 'cls_learnable_{}_{}_fewshot{}'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_learnable_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
 
         elif args.bert_induced and args.bert_freeze and args.cls_freeze:
             model_directory = 'cls_learnable'
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.source_file).to(device)
             print('bert freeze, cls freeze')
             if args.concat:
-                filename = 'cls_fixed_{}_{}_fewshot{}_concat'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_fixed_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
             elif not args.concat:
-                filename = 'cls_fixed_{}_{}_fewshot{}'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_fixed_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
 
         elif args.bert_induced and not args.bert_freeze:
             model_directory = 'bert_finetune'
@@ -115,11 +115,11 @@ class DataSize_Trainer():
             print('singleRNN')
 
             if args.concat:
-                filename = 'trained_single_rnn_{}_fewshot{}_concat'.format(args.seed, args.few_shot)
+                filename = 'trained_single_rnn_{}_dataportion{}_concat'.format(args.seed, args.few_shot)
             elif not args.concat:
-                filename = 'trained_single_rnn_{}_fewshot{}'.format(args.seed, args.few_shot)
+                filename = 'trained_single_rnn_{}_dataportion{}'.format(args.seed, args.few_shot)
 
-        path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
+        path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
         self.best_eval_path = path + '_best_auprc.pt'
