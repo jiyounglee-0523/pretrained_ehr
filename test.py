@@ -438,7 +438,7 @@ def main():
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
-    parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str, default='med')
+    parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='med')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=256)
