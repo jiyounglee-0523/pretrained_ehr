@@ -28,7 +28,10 @@ class Bert_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7day'
 
-        filename = 'bert_finetune_{}'.format(args.seed)
+        if args.only_BCE:
+            filename = 'bert_finetune_{}_onlyBCE'.format(args.seed)
+        elif not args.only_BCE:
+            filename = 'bert_finetune_{}'.format(args.seed)
 
         path = os.path.join(args.path, 'bert_finetune', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
@@ -36,12 +39,19 @@ class Bert_Trainer():
         self.best_eval_path = path + '_best_eval.pt'
         self.final_path = path + '_final.pt'
 
-        if args.target == 'dx_depth1_unique':
-            output_size = 18
+        if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()
-        else:
-            output_size = 1
-            self.criterion = FocalLoss()
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+            else:
+                output_size = 1
+        elif not args.only_BCE:
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+                self.criterion = nn.BCEWithLogitsLoss()
+            else:
+                output_size = 1
+                self.criterion = FocalLoss()
 
         self.model = nn.DataParallel(post_RNN(args, output_size, self.criterion))
         self.model.to(self.device)

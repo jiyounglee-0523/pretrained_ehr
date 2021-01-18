@@ -30,15 +30,27 @@ class bert_dict_Trainer():
 
         if args.cls_freeze:
             if args.concat:
-                filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
-                filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
         elif not args.cls_freeze:
             if args.concat:
-                filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
-                filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
@@ -46,12 +58,19 @@ class bert_dict_Trainer():
         self.best_eval_path = path + '_best_auprc.pt'
         self.final_path = path + '_final.pt'
 
-        if args.target == 'dx_depth1_unique':
-            output_size = 18
+        if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()
-        else:
-            output_size = 1
-            self.criterion = FocalLoss()
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+            else:
+                output_size = 1
+        elif not args.only_BCE:
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+                self.criterion = nn.BCEWithLogitsLoss()
+            else:
+                output_size = 1
+                self.criterion = FocalLoss()
 
         self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)

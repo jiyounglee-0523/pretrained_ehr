@@ -174,6 +174,8 @@ v5.2
 
 v5.3  singlernn_dataloader.py : implemented both
 
+v5.4: added option for only BCE loss (vs. BCE + Focal); modified main.py, trainer/*
+
 ## To-Do
 - work on multiple items
 - experiment with training dataset size dependent
