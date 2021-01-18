@@ -13,15 +13,15 @@ from dataset.prebert_dataloader import healthcare_dataset
 def bertinduced_dict_get_dataloader(args, data_type='train'):
     if data_type == 'train':
         train_data = bert_dict_dataset(args, data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'eval':
         eval_data = bert_dict_dataset(args, data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'test':
         test_data = bert_dict_dataset(args, data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=32)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
 
     return dataloader
 

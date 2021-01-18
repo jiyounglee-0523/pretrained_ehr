@@ -178,3 +178,4 @@ v5.4: added option for only BCE loss (vs. BCE + Focal); modified main.py, traine
 
 v5.5: singleRNN dataloader, visualize result 
 
+v5.6: debug BCELoss 

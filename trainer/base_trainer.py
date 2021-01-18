@@ -17,6 +17,8 @@ class Trainer(nn.Module):
         self.eval_dataloader = valid_dataloader
         self.device = device
         self.debug = args.debug
+        self.BCE = args.only_BCE
+        self.target = args.target
 
         if not self.debug:
             wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
@@ -123,7 +125,11 @@ class Trainer(nn.Module):
                 target = target.to(self.device)
 
                 y_pred = self.model(item_id, lengths)
-                loss = self.criterion(y_pred, target.float().to(self.device))
+
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, target.float().to(self.device))
 
                 loss.backward()
                 self.optimizer.step()
@@ -191,7 +197,11 @@ class Trainer(nn.Module):
                 item_id.to(self.device); target.to(self.device)
 
                 y_pred = self.model(item_id, lengths)
-                loss = self.criterion(y_pred, target.float().to(self.device))
+
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, target.float().to(self.device))
                 avg_eval_loss += loss.item() / len(self.eval_dataloader)
 
                 probs_eval = torch.sigmoid(y_pred).detach().cpu().numpy()
