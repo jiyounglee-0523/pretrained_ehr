@@ -2,7 +2,7 @@ import subprocess
 import os
 
 # Configuration before run
-device = 3
+device = 6
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
@@ -17,12 +17,11 @@ for source_file in source_file_list:
         TRAINING_CONFIG = {
             "source_file": source_file,
             "target": target,
-            "item": 'lab',
+            "item": 'inf',
             "max_length": 150,
             "bert_model": 'pubmed_bert',
             "bert_freeze": True,
             "device_number": device,
-            "concat": True
         }
 
 
