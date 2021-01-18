@@ -30,10 +30,16 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.concat:
-            filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+        if args.concat: # reference: lines 66-78
+            if args.only_BCE:
+                filename = 'trained_single_rnn_{}_concat_onlyBCE'.format(args.seed)
+            elif not args.only_BCE:  # elif (vs. else) statement used for extra clarity
+                filename = 'trained_single_rnn_{}_concat'.format(args.seed)
         elif not args.concat:
-            filename = 'trained_single_rnn_{}'.format(args.seed)
+            if args.only_BCE:
+                filename = 'trained_single_rnn_{}_onlyBCE'.format(args.seed)
+            elif not args.only_BCE:
+                filename = 'trained_single_rnn_{}'.format(args.seed)
         path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
@@ -68,12 +74,19 @@ class Trainer(nn.Module):
             elif args.item == 'all':
                 vocab_size = 15794 if args.concat else 3672
 
-        if args.target == 'dx_depth1_unique':
-            output_size = 18
+        if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()
-        else:
-            output_size = 1
-            self.criterion = FocalLoss()
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+            else:
+                output_size = 1
+        elif not args.only_BCE:
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+                self.criterion = nn.BCEWithLogitsLoss()
+            else:
+                output_size = 1
+                self.criterion = FocalLoss()
 
         self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
