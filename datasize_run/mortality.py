@@ -6,8 +6,8 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'training_datasize_dependent.py'
 
-device = 0
-data_portion_list = [0.3]
+device = 7
+data_portion_list = [0.1, 0.3, 0.5, 0.7, 0.9]
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
@@ -17,7 +17,7 @@ for data_portion in data_portion_list:
         "bert_induced": True,
         "source_file": 'eicu',
         "few_shot": data_portion,
-        "target": 'readmission',
+        "target": 'mortality',
         "item": 'med',
         "max_length": 150,
         "bert_model": 'bio_bert',

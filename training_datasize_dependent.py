@@ -96,6 +96,7 @@ class DataSize_Trainer():
             ## model name!!
 
         elif not args.bert_induced:
+            model_directory = 'singleRNN'
             if args.source_file == 'mimic':
                 if args.item == 'lab':
                     vocab_size = 5110 if args.concat else 359

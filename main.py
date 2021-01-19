@@ -39,6 +39,7 @@ def main():
     # args.device_number = 6
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
     args.rnn_bidirection = False
 
     # hyperparameter tuning
