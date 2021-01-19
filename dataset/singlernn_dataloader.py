@@ -100,7 +100,7 @@ class eicu_dataset(Dataset):
         # single_item_offset_order = self.item_offset_order[item]
         single_target = self.item_target[item]
 
-        if single_target == 'dx_depth1_unique':
+        if self.target == 'dx_depth1_unique':
             single_target = [int(j) for j in single_target]
             target_list = torch.Tensor(single_target).long()
 

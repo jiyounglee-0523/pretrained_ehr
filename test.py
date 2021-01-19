@@ -51,25 +51,53 @@ class Few_Shot_Dataset(Dataset):
         self.bert_induced = args.bert_induced
 
         if test_file == 'both':
-            raise NotImplementedError
+            if args.concat:
+                mimic_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
+                                          'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length,
+                                                                                args.seed))
+                eicu_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
+                                         'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
+            elif not args.concat:
+                mimic_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
+                                          'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+                eicu_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
+                                         'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+            mimic = pickle.load(open(mimic_path, 'rb'))
+            eicu = pickle.load(open(eicu_path, 'rb'))
+
+            mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
+            eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+
+            mimic_item_name.extend(eicu_item_name)
+            self.item_name = mimic_item_name
+
+            if self.target == 'dx_depth1_unique':
+                mimic_item_target.extend(eicu_item_target)
+                self.item_target = mimic_item_target
+            else:
+                self.item_target = torch.cat((mimic_item_target, eicu_item_target))
+
 
         else:
             few_shot = args.few_shot
             if few_shot == 0.0 or few_shot == 1.0:
                 if args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                    path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
                                         '{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window,
                                                                     item, self.max_length,
                                                                     args.seed))
                 elif not args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
+                    path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
                                                                                                  args.seed))
             else:
                 if args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                    path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
                 elif not args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                    path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -79,24 +107,21 @@ class Few_Shot_Dataset(Dataset):
             elif test_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_id, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
             if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+                vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
             elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
-            self.word2embed = pickle.load(open(vocab_path, 'rb'))
+                vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+            self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
-        return self.item_id.size(0)
+        return len(self.item_name)
 
     def __getitem__(self, item):
         # RNN
-        single_item_id = self.item_id[item]
-        # single_item_offset = self.item_offset[item]
-        # single_item_offset_order = self.item_offset_order[item]
+
         single_target = self.item_target[item]
-        single_length = torch.LongTensor([torch.max(torch.nonzero(single_item_id.data)) + 1])
 
         if self.target == 'dx_depth1_unique':
             single_target = [int(j) for j in single_target]
@@ -108,9 +133,10 @@ class Few_Shot_Dataset(Dataset):
         # bert_induced
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
+        embedding = []
 
         def embed_dict(x):
-            return self.word2embed[x]
+            return self.id_dict[x]
 
         embedding = list(map(embed_dict, single_item_name))  # list with length seq_len
         embedding = torch.Tensor(embedding)
@@ -118,10 +144,7 @@ class Few_Shot_Dataset(Dataset):
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
 
-        if not self.bert_induced:
-            return single_item_id, single_target, single_length
-        elif self.bert_induced:
-            return embedding, single_target, seq_len
+        return embedding, single_target, seq_len
 
 
     def preprocess(self, cohort, data_type, item, time_window, target):
@@ -176,7 +199,7 @@ class Few_Shot_Dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist()) # shape of (B)
 
-        return item_name, item_id, item_target
+        return item_name, item_target
 
 
 ################################################################################
@@ -451,7 +474,7 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str, default='bio_bert')
     parser.add_argument('--bert_freeze', action='store_true')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
+    parser.add_argument('--path', type=str, default='/home/edlab-jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=int, default=6)
     parser.add_argument('--debug', action='store_true')
