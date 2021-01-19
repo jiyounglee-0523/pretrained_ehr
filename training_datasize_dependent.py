@@ -104,13 +104,26 @@ class DataSize_Trainer():
                     vocab_size = 2211 if args.concat else 1535
                 elif args.item == 'inf':
                     vocab_size = 485
+                elif args.item == 'all':
+                    vocab_size = 7563 if args.concat else 2377
             elif args.source_file == 'eicu':
                 if args.item == 'lab':
                     vocab_size = 9659 if args.concat else 134
                 elif args.item == 'med':
-                    vocab_size = 2692 if args.concat else 1283
+                    vocab_size = 2693 if args.concat else 1283
                 elif args.item == 'inf':
                     vocab_size = 495
+                elif args.item == 'all':
+                    vocab_size = 8532 if args.concat else 1344
+            elif args.source_file == 'both':
+                if args.item == 'lab':
+                    vocab_size = 14371 if args.concat else 448
+                elif args.item == 'med':
+                    vocab_size = 4898 if args.concat else 2812
+                elif args.item == 'inf':
+                    vocab_size = 979
+                elif args.item == 'all':
+                    vocab_size = 15794 if args.concat else 3672
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('singleRNN')
@@ -271,7 +284,7 @@ def main():
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str)
     parser.add_argument('--few_shot', choices=[0.1, 0.3, 0.5, 0.7, 0.9, 1.0], type=float)   # training_dataset_size ratio
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str)
-    parser.add_argument('--item', choices=['lab', 'med', 'inf'], type=str)
+    parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')

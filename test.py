@@ -27,15 +27,15 @@ few-shot: 0.0(zero-shot), 0.1, 0.3, 0.5, 0.7, 0.9, 1.0(full-shot = transfer lear
 def get_test_dataloader(args, data_type='train'):       # validation? test?
     if data_type == 'train':
         train_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     elif data_type == 'eval':
         eval_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
     elif data_type == 'test':
         test_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=32)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
     return dataloader
 
@@ -53,15 +53,15 @@ class Few_Shot_Dataset(Dataset):
         if test_file == 'both':
             if args.concat:
                 mimic_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
-                                          'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length,
+                                          'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length,
                                                                                 args.seed))
                 eicu_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
-                                         'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
+                                         'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
             elif not args.concat:
                 mimic_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
-                                          'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+                                          'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
                 eicu_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item,
-                                         'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+                                         'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
 
@@ -98,22 +98,22 @@ class Few_Shot_Dataset(Dataset):
                     path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
                 elif not args.concat:
                     path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
-            data = pickle.load(open(path, 'rb'))
+                data = pickle.load(open(path, 'rb'))
 
-            # change column name
-            if test_file == 'mimic':
-                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+                # change column name
+                if test_file == 'mimic':
+                    data = data.rename({'HADM_ID': 'ID'}, axis='columns')
 
-            elif test_file == 'eicu':
-                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+                elif test_file == 'eicu':
+                    data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+                self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-            if args.concat:
-                vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
-            elif not args.concat:
-                vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
-            self.id_dict = pickle.load(open(vocab_path, 'rb'))
+        if args.concat:
+            vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+        elif not args.concat:
+            vocab_path = os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+        self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
         return len(self.item_name)

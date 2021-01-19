@@ -16,10 +16,10 @@ class dict_post_RNN(nn.Module):
         self.cls_freeze = args.cls_freeze
 
         if args.concat:
-            initial_embed_weight = pickle.load(open(os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
+            initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
                                                              '{}_{}_{}_{}_concat_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
         elif not args.concat:
-            initial_embed_weight = pickle.load(open(os.path.join('/home/edlab-jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
+            initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
                                                              '{}_{}_{}_{}_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
 
         self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
