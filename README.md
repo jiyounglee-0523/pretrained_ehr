@@ -181,3 +181,5 @@ v5.5: singleRNN dataloader, visualize result
 v5.6: debug BCELoss 
 
 v5.7: training dataset size dependent debug, visualize result 
+
+v5.8 : visualize result/*
