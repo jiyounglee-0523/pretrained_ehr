@@ -3,7 +3,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_model, item, concat:bool):
+def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_model, item, concat:bool, cls_freeze:bool):
     task_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
 
     for task in task_list:
@@ -13,6 +13,10 @@ def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_mod
         few_shot_sample = few_shot_sample[few_shot_sample['item'] == item]
         few_shot_sample = few_shot_sample[few_shot_sample['concat'] == concat]
         few_shot_sample = few_shot_sample[few_shot_sample['test_file'] == test_file]
+        if cls_freeze:
+            few_shot_sample = few_shot_sample[few_shot_sample['cls_freeze'] == True]
+        elif not cls_freeze:
+            few_shot_sample = few_shot_sample[few_shot_sample['cls_freeze'] != True]
         test2test_sample = few_shot_sample[few_shot_sample['source_file'] == test_file]
         few_shot_sample = few_shot_sample[few_shot_sample['source_file'] == source_file]
 
@@ -24,9 +28,17 @@ def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_mod
         seven_shot = np.array(np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.7].test_auprc.values.tolist()))
         nine_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.9].test_auprc.values.tolist())
         full_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 1].test_auprc.values.tolist())
+        # assert len(zero_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(one_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(three_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(five_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(seven_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(nine_shot) == 10, "check the number of experiments, it exceeds 10"
+        # assert len(full_shot) == 10, "check the number of experiments, it exceeds 10"
 
         # test2test value (baseline)
         test2test = np.array(test2test_sample.test_auprc.values.tolist())
+        # assert len(test2test) == 10, "check the number of experiments, it exceeds 10."
 
         # plot the result
         x_axis = np.array([0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0])
@@ -53,6 +65,6 @@ def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_mod
         ax.grid(which='major', axis='x')
         ax.grid(which='major', axis='y')
 
-        plt.title('{}_{}'.format(task, 'test AUPRC'))
+        plt.title('{}_{}_{}_{}'.format(task, item, concat, 'test AUPRC'))
 
         ax.legend(loc='upper right', bbox_to_anchor=(1.4, 1))

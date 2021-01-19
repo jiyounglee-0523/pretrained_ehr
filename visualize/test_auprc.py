@@ -20,7 +20,7 @@ def test_auprc(result_file:pd.DataFrame, bert_induced:bool, source_file, bert_mo
         result_sample = result_sample[result_sample['bert_induced'] == bert_induced]
 
         test_auprc = np.array(result_sample.test_auprc.values.tolist())
-        assert len(test_auprc) == 10, "check the experiment number, it exceeds 10."
+        assert len(test_auprc) == 10, "check the number of experiments, it exceeds 10."
 
         test_mean = np.mean(test_auprc)
         test_std = np.std(test_auprc)
