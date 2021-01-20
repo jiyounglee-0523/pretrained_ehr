@@ -21,20 +21,21 @@ def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_mod
         few_shot_sample = few_shot_sample[few_shot_sample['source_file'] == source_file]
 
         # test auprc for each few shot ratio
-        zero_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0].test_auprc.values.tolist())
-        one_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.1].test_auprc.values.tolist())
-        three_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.3].test_auprc.values.tolist())
-        five_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.5].test_auprc.values.tolist())
-        seven_shot = np.array(np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.7].test_auprc.values.tolist()))
-        nine_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 0.9].test_auprc.values.tolist())
-        full_shot = np.array(few_shot_sample[few_shot_sample['few_shot'] == 1].test_auprc.values.tolist())
-        # assert len(zero_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(one_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(three_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(five_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(seven_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(nine_shot) == 10, "check the number of experiments, it exceeds 10"
-        # assert len(full_shot) == 10, "check the number of experiments, it exceeds 10"
+        bert_induced = few_shot_sample[few_shot_sample['bert_induced'] == True]
+        zero_shot = np.array(bert_induced[bert_induced['few_shot'] == 0].test_auprc.values.tolist())
+        one_shot = np.array(bert_induced[bert_induced['few_shot'] == 0.1].test_auprc.values.tolist())
+        three_shot = np.array(bert_induced[bert_induced['few_shot'] == 0.3].test_auprc.values.tolist())
+        five_shot = np.array(bert_induced[bert_induced['few_shot'] == 0.5].test_auprc.values.tolist())
+        seven_shot = np.array(bert_induced[bert_induced['few_shot'] == 0.7].test_auprc.values.tolist())
+        nine_shot = np.array(bert_induced[bert_induced['few_shot'] == 0.9].test_auprc.values.tolist())
+        full_shot = np.array(bert_induced[bert_induced['few_shot'] == 1].test_auprc.values.tolist())
+        assert len(zero_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(one_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(three_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(five_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(seven_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(nine_shot) == 10, "check the number of experiments, it exceeds 10"
+        assert len(full_shot) == 10, "check the number of experiments, it exceeds 10"
 
         # test2test value (baseline)
         test2test = np.array(test2test_sample.test_auprc.values.tolist())

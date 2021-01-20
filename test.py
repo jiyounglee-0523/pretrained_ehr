@@ -256,7 +256,10 @@ class Tester(nn.Module):
 
         elif args.bert_induced and args.bert_freeze and args.cls_freeze:
             model_directory = 'cls_learnable'
-            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
+            if args.source_file == 'both':
+                self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
+            else:
+                self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
             print('bert freeze, cls_freeze')
             if args.concat:
                 filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
@@ -327,16 +330,20 @@ class Tester(nn.Module):
         best_eval_path = self.source_path + '_best_auprc.pt'
         print('Load Model from {}'.format(best_eval_path))
         ckpt = torch.load(best_eval_path)
-        if args.source_file != args.test_file:
-            pretrained_dict = ckpt['model_state_dict']
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}    # do not load embedding weight (singleRNN)
-            pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embed' in k}     # do not load embedding weight (bert-induced)
-            self.model.load_state_dict(pretrained_dict, strict=False)
-            print("Model partially loaded!")
-
-        elif args.source_file == args.test_file:
+        if args.source_file == 'both':
             self.model.load_state_dict(ckpt['model_state_dict'])
             print("Model fully loaded!")
+        else:
+            if args.source_file != args.test_file:
+                pretrained_dict = ckpt['model_state_dict']
+                pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}    # do not load embedding weight (singleRNN)
+                pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embed' in k}     # do not load embedding weight (bert-induced)
+                self.model.load_state_dict(pretrained_dict, strict=False)
+                print("Model partially loaded!")
+
+            elif args.source_file == args.test_file:
+                self.model.load_state_dict(ckpt['model_state_dict'])
+                print("Model fully loaded!")
 
         print('Model will be saved in {}'.format(self.best_target_path))
 
