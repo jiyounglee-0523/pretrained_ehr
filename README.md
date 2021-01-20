@@ -185,3 +185,5 @@ v5.7: training dataset size dependent debug, visualize result
 v5.8 : visualize result/*
 
 v5.9: test.py : debuged when source_file = both
+
+**v6.0** : test.py: debuged when source_file = both (loading model parameters)
