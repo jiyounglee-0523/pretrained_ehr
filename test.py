@@ -49,6 +49,7 @@ class Few_Shot_Dataset(Dataset):
         time_window = args.time_window
         self.word_max_length = args.word_max_length
         self.bert_induced = args.bert_induced
+        source_file = args.source_file
 
         if test_file == 'both':
             if args.concat:
@@ -98,21 +99,28 @@ class Few_Shot_Dataset(Dataset):
                     path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
                 elif not args.concat:
                     path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
-                data = pickle.load(open(path, 'rb'))
+            data = pickle.load(open(path, 'rb'))
 
-                # change column name
-                if test_file == 'mimic':
-                    data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+            # change column name
+            if test_file == 'mimic':
+                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
 
-                elif test_file == 'eicu':
-                    data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+            elif test_file == 'eicu':
+                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-                self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
-        if args.concat:
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
-        elif not args.concat:
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+        if source_file == 'both':
+            if args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, 'both_{}_{}_{}_concat_word2embed.pkl'.format(item, time_window, args.bert_model))
+            elif not args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, 'both_{}_{}_{}_word2embed.pkl'.format(item, time_window, args.bert_model))
+        else:
+
+            if args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+            elif not args.concat:
+                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
@@ -236,7 +244,10 @@ class Tester(nn.Module):
 
         if args.bert_induced and args.bert_freeze and not args.cls_freeze:
             model_directory = 'cls_learnable'
-            self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
+            if args.source_file == 'both':
+                self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
+            else:
+                self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
             print('bert freeze, cls_learnable')
             if args.concat:
                 filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
@@ -260,20 +271,35 @@ class Tester(nn.Module):
 
         elif not args.bert_induced:
             model_directory = 'singleRNN'
-            if args.test_file == 'mimic':
+
+            if args.source_file == 'both':
                 if args.item == 'lab':
-                    vocab_size = 5110 if args.concat else 359
+                    vocab_size = 14371 if args.concat else 448
                 elif args.item == 'med':
-                    vocab_size = 2211 if args.concat else 1535
+                    vocab_size = 4898 if args.concat else 2812
                 elif args.item == 'inf':
-                    vocab_size = 485
-            elif args.test_file == 'eicu':
-                if args.item == 'lab':
-                    vocab_size = 9659 if args.concat else 134
-                elif args.item == 'med':
-                    vocab_size = 2693 if args.concat else 1283
-                elif args.item == 'inf':
-                    vocab_size = 495
+                    vocab_size = 979
+                elif args.item == 'all':
+                    vocab_size = 15794 if args.concat else 3672
+            else:
+                if args.test_file == 'mimic':
+                    if args.item == 'lab':
+                        vocab_size = 5110 if args.concat else 359
+                    elif args.item == 'med':
+                        vocab_size = 2211 if args.concat else 1535
+                    elif args.item == 'inf':
+                        vocab_size = 485
+                    elif args.item == 'all':
+                        vocab_size = 7563 if args.concat else 2377
+                elif args.test_file == 'eicu':
+                    if args.item == 'lab':
+                        vocab_size = 9659 if args.concat else 134
+                    elif args.item == 'med':
+                        vocab_size = 2693 if args.concat else 1283
+                    elif args.item == 'inf':
+                        vocab_size = 495
+                    elif args.item == 'all':
+                        vocab_size = 8532 if args.concat else 1344
 
             self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
