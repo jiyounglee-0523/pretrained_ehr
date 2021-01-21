@@ -40,7 +40,7 @@ def visualize_fewshot(result_file:pd.DataFrame, source_file, test_file, bert_mod
         # test2test value (baseline)
         test2test = np.array(test2test_sample.test_auprc.values.tolist())
         # assert len(test2test) == 10, "check the number of experiments, it exceeds 10."
-
+bert
         # plot the result
         x_axis = np.array([0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0])
         fig = plt.figure()

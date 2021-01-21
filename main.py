@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--concat', action='store_true', help='only for lab now')
     parser.add_argument('--separate_overlapping_codes', action='store_true')
     parser.add_argument('--only_BCE', action='store_true')
+    parser.add_argument('--transformer', action='store_true')
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -85,15 +86,13 @@ def main():
         torch.backends.cudnn.deterministic = True
 
         args.seed = seed
-
         print('seed_number', args.seed)
 
-
-        # change the train_loader, valid_loader (Dataset)   valid_index should be changed!
         train_loader = get_dataloader(args=args, data_type='train')
         valid_loader = get_dataloader(args=args, data_type='eval')
+        test_loader = get_dataloader(args=args, data_type='test')
 
-        trainer = Trainer(args, train_loader, valid_loader, device)
+        trainer = Trainer(args, train_loader, valid_loader, test_loader, device)
         trainer.train()
 
         print('Finished training seed: {}'.format(seed))

@@ -46,7 +46,7 @@ def visualize_trainingdatasize(result_file:pd.DataFrame, source_file, item, conc
 
         # plot the result
         x_axis = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
-        ax = fig.add_subplot(2, 2, i)
+        ax = fig.add_subplot(2, 3, i)
 
         bert_mean_value = np.array([np.mean(bert_one_shot), np.mean(bert_three_shot), np.mean(bert_five_shot), np.mean(bert_seven_shot), np.mean(bert_nine_shot)])
         bert_std_value = np.array([np.std(bert_one_shot), np.std(bert_three_shot), np.std(bert_five_shot), np.std(bert_seven_shot), np.std(bert_nine_shot)])
