@@ -8,18 +8,23 @@ import tqdm
 from models.rnn_models import *
 from utils.loss import *
 from utils.trainer_utils import *
+from dataset.singlernn_dataloader import singlernn_get_dataloader
 
 class Trainer(nn.Module):
-    def __init__(self, args, train_dataloader, valid_dataloader, test_dataloader, device):
+    def __init__(self, args, train_dataloader, valid_dataloader, device):
         super().__init__()
-
         self.dataloader = train_dataloader
         self.eval_dataloader = valid_dataloader
-        self.test_dataloader = test_dataloader
+        if args.source_file != 'both':
+            self.test_dataloader = singlernn_get_dataloader(args, data_type='test')
+        elif args.source_file == 'both':
+            self.mimic_test_dataloader = singlernn_get_dataloader(args, data_type='test', data_name='mimic')
+            self.eicu_test_dataloader = singlernn_get_dataloader(args, data_type='test', data_name='eicu')
         self.device = device
         self.debug = args.debug
         self.BCE = args.only_BCE
         self.target = args.target
+        self.source_file = args.source_file
 
         if not self.debug:
             wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
@@ -182,7 +187,10 @@ class Trainer(nn.Module):
                                 'auroc': auroc_eval,
                                 'auprc': auprc_eval,
                                 'epochs': n_epoch}, self.final_path)
-                self.test()
+                if self.source_file == 'both':
+                    self.test_both()
+                else:
+                    self.test()
                 break
 
 
@@ -248,8 +256,68 @@ class Trainer(nn.Module):
 
             print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
                                                                                             auprc_test))
+    def test_both(self):
+        ckpt = torch.load(self.best_eval_path)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model.eval()
 
+        preds_test = []
+        truths_test = []
+        avg_test_loss = 0.
 
+        with torch.no_grad():
+            for iter, sample in enumerate(self.mimic_test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.mimic_test_dataloader)
+
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test)
+
+            if not self.debug:
+                wandb.log({'mimic_test_loss': avg_test_loss,
+                           'mimic_test_auroc': auroc_test,
+                           'mimic_test_auprc': auprc_test})
+
+            print('[Test/mimic]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
+                                                                                        auprc_test))
+
+        preds_test = []
+        truths_test = []
+        avg_test_loss = 0.
+
+        with torch.no_grad():
+            for iter, sample in enumerate(self.eicu_test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.eicu_test_dataloader)
+
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test)
+
+            if not self.debug:
+                wandb.log({'eicu_test_loss': avg_test_loss,
+                           'eicu_test_auroc': auroc_test,
+                           'eicu_test_auprc': auprc_test})
+
+            print('[Test/eicu]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
+                                                                                        auprc_test))
 
 
 

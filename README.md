@@ -187,3 +187,6 @@ v5.8 : visualize result/*
 v5.9: test.py : debuged when source_file = both
 
 **v6.0** : test.py: debuged when source_file = both (loading model parameters)
+
+v6.1: main.py : implemented test on test dataset in main.py
+

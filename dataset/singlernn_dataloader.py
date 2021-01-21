@@ -8,7 +8,7 @@ import os
 
 import pickle
 
-def singlernn_get_dataloader(args, data_type = 'train'):
+def singlernn_get_dataloader(args, data_type = 'train', data_name = None):
     if data_type == 'train':
         train_data = eicu_dataset(args, data_type)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
@@ -18,15 +18,18 @@ def singlernn_get_dataloader(args, data_type = 'train'):
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'test':
-        test_data = eicu_dataset(args, data_type)
+        test_data = eicu_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
 
     return dataloader
 
 
 class eicu_dataset(Dataset):
-    def __init__(self, args, data_type):
-        source_file = args.source_file
+    def __init__(self, args, data_type, data_name=None):
+        if data_name is None:
+            source_file = args.source_file
+        else:
+            source_file = data_name
         self.source_file = source_file
         self.target = args.target
         item = args.item
@@ -35,7 +38,7 @@ class eicu_dataset(Dataset):
         time_window = args.time_window
         self.transformer = args.transformer
 
-        if args.source_file == 'both':
+        if source_file == 'both':
             if args.concat:
                 mimic_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
                                     'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
@@ -85,11 +88,11 @@ class eicu_dataset(Dataset):
 
         if args.concat:
             vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window,
+                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window,
                                                                                  args.bert_model))
         elif not args.concat:
             vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window,
                                                                           args.bert_model))  ################### bert model?
 
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
