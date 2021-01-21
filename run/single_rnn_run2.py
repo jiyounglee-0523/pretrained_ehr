@@ -9,8 +9,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-source_file_list = ['both']
-target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
+source_file_list = ['mimic']
+target_list = ['mortality']
 
 for source_file in source_file_list:
     for target in target_list:
@@ -22,6 +22,7 @@ for source_file in source_file_list:
             "bert_model": 'pubmed_bert',
             "bert_freeze": True,
             "device_number": device,
+            "debug":True
         }
 
 

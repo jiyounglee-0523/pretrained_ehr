@@ -11,7 +11,7 @@ import re
 from dataset.prebert_dataloader import healthcare_dataset
 
 
-def bertinduced_dict_get_dataloader(args, data_type='train'):
+def bertinduced_dict_get_dataloader(args, data_type='train', data_name=None):
     if data_type == 'train':
         train_data = bert_dict_dataset(args, data_type)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
@@ -21,7 +21,7 @@ def bertinduced_dict_get_dataloader(args, data_type='train'):
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'test':
-        test_data = bert_dict_dataset(args, data_type)
+        test_data = bert_dict_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
 
     return dataloader
@@ -29,8 +29,11 @@ def bertinduced_dict_get_dataloader(args, data_type='train'):
 
 
 class bert_dict_dataset(Dataset):
-    def __init__(self, args, data_type):
-        source_file = args.source_file
+    def __init__(self, args, data_type, data_name=None):
+        if data_name is None:
+            source_file = args.source_file
+        else:
+            source_file = data_name
         self.target = args.target
         item = args.item
         self.max_length = args.max_length
@@ -39,7 +42,7 @@ class bert_dict_dataset(Dataset):
         self.separate_overlapping_codes = args.separate_overlapping_codes
         self.transformer = args.transformer
 
-        if args.source_file == 'both':
+        if source_file == 'both':
             if args.concat:
                 path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
                                 'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
@@ -73,15 +76,6 @@ class bert_dict_dataset(Dataset):
             else:
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
-            if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
-            elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
-
-            self.id_dict = pickle.load(open(vocab_path, 'rb'))
-
         else:
             if args.concat:
                 path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, self.max_length, args.seed))
@@ -98,14 +92,14 @@ class bert_dict_dataset(Dataset):
 
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
-            # check data path
-            if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                          '{}_{}_{}_{}_concat_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
-            elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
-                                      '{}_{}_{}_{}_word2embed.pkl'.format(source_file, item, time_window, args.bert_model))
-            self.id_dict = pickle.load(open(vocab_path, 'rb'))
+        # check data path
+        if args.concat:
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                          '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window, args.bert_model))
+        elif not args.concat:
+            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window, args.bert_model))
+        self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
         return len(self.item_name)

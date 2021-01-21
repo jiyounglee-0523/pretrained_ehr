@@ -73,6 +73,7 @@ def main():
     if args.item == 'all':
         assert args.max_length == '300', 'when using all items, max length should be 300'
 
+
     mp.set_sharing_strategy('file_system')
 
     SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
@@ -90,9 +91,8 @@ def main():
 
         train_loader = get_dataloader(args=args, data_type='train')
         valid_loader = get_dataloader(args=args, data_type='eval')
-        test_loader = get_dataloader(args=args, data_type='test')
 
-        trainer = Trainer(args, train_loader, valid_loader, test_loader, device)
+        trainer = Trainer(args, train_loader, valid_loader, device)
         trainer.train()
 
         print('Finished training seed: {}'.format(seed))
