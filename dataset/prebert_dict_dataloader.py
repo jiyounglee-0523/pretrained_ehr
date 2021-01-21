@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
 import numpy as np
 import pickle
@@ -36,6 +37,7 @@ class bert_dict_dataset(Dataset):
         time_window = args.time_window
         self.word_max_length = args.word_max_length
         self.separate_overlapping_codes = args.separate_overlapping_codes
+        self.transformer = args.transformer
 
         if args.source_file == 'both':
             if args.concat:
@@ -57,11 +59,14 @@ class bert_dict_dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
-            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+            mimic_item_name, mimic_item_target, mimic_item_offset_order = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target, eicu_item_offset_order = self.preprocess(eicu, data_type, item, time_window, self.target)
 
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
+
+            #self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)    ########## check
+
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
                 self.item_target = mimic_item_target
@@ -91,7 +96,7 @@ class bert_dict_dataset(Dataset):
             elif source_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
             # check data path
             if args.concat:
@@ -106,6 +111,7 @@ class bert_dict_dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
+        #single_order_offset = self.item_offset_order[item]
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
@@ -128,8 +134,10 @@ class bert_dict_dataset(Dataset):
             single_target[target_list - 1] = 1   # shape of 18
 
         # implement single_length later
-
-        return embedding, single_target, seq_len
+        if not self.transformer:
+            return embedding, single_target, seq_len
+        elif self.transformer:
+            return embedding, single_target
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
@@ -165,11 +173,12 @@ class bert_dict_dataset(Dataset):
         item_name = cohort[name_window].values.tolist()
         # tokenize
 
-        ## offset order? offset?
+        item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_offset_order = pad_sequence(item_offset_order, batch_first = True)
 
         if target == 'dx_depth1_unique':
             item_target = cohort[target].values.tolist()
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of B
 
-        return item_name, item_target
+        return item_name, item_target, item_offset_order

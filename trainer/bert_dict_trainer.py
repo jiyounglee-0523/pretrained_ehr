@@ -10,9 +10,10 @@ from utils.loss import *
 from utils.trainer_utils import *
 
 class bert_dict_Trainer():
-    def __init__(self, args, train_dataloader, valid_dataloader, device):
+    def __init__(self, args, train_dataloader, valid_dataloader, test_dataloder, device):
         self.dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
+        self.test_dataloader = test_dataloder
         self.device = device
         self.debug = args.debug
         self.BCE = args.only_BCE
@@ -155,6 +156,7 @@ class bert_dict_Trainer():
                                 'auroc': best_auroc,
                                 'auprc': best_auprc,
                                 'epochs': n_epoch}, self.final_path)
+                self.test()
                 break
 
     def evaluation(self):
@@ -186,3 +188,36 @@ class bert_dict_Trainer():
             auprc_eval = average_precision_score(truths_eval, preds_eval)
 
         return avg_eval_loss, auroc_eval, auprc_eval
+
+    def test(self):
+        ckpt = torch.load(self.best_eval_path)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model.eval()
+
+        preds_test = []
+        truths_test = []
+        avg_test_loss =0.
+
+        with torch.no_grad():
+            for iter, sample in enumerate(self.test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.test_dataloader)
+
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test)
+
+            if not self.debug:
+                wandb.log({'test_loss': avg_test_loss,
+                           'test_auroc': auroc_test,
+                           'test_auprc': auprc_test})
+
+                print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test, auprc_test))

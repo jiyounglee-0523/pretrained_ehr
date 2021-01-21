@@ -33,6 +33,7 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         self.max_length = max_length
         time_window = args.time_window
+        self.transformer = args.transformer
 
         if args.source_file == 'both':
             if args.concat:
@@ -51,11 +52,13 @@ class eicu_dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
-            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+            mimic_item_name, mimic_item_target, mimic_item_offset_order = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target, eicu_item_offset_order = self.preprocess(eicu, data_type, item, time_window, self.target)
 
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
+
+            #self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)
 
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
@@ -78,7 +81,7 @@ class eicu_dataset(Dataset):
             elif source_file == 'eicu':
                 data = data.rename({'patientunitstayid':'ID'}, axis='columns')
 
-            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
         if args.concat:
             vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
@@ -97,7 +100,7 @@ class eicu_dataset(Dataset):
 
     def __getitem__(self, item):
         # single_item_offset = self.item_offset[item]
-        # single_item_offset_order = self.item_offset_order[item]
+        #single_order_offset = self.item_offset_order[item]
         single_target = self.item_target[item]
 
         if self.target == 'dx_depth1_unique':
@@ -119,9 +122,11 @@ class eicu_dataset(Dataset):
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
-        return embedding, single_target, seq_len
 
-
+        if not self.transformer:
+            return embedding, single_target, seq_len
+        elif self.transformer:
+            return embedding, single_target
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         # time window
@@ -159,8 +164,8 @@ class eicu_dataset(Dataset):
 
         item_name = cohort[name_window].values.tolist()
 
-        # item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
-        # item_offset_order = pad_sequence(item_offset_order, batch_first=True)  # shape of (B, max_len)
+        item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_offset_order = pad_sequence(item_offset_order, batch_first=True)  # shape of (B, max_len)
         #
         # item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         # item_offset = pad_sequence(item_offset, batch_first=True)
@@ -171,7 +176,7 @@ class eicu_dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist())     # shape of (B)
 
-        return item_name, item_target
+        return item_name, item_target, item_offset_order
 
 
 
