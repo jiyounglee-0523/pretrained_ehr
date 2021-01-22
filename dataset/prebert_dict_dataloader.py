@@ -68,7 +68,10 @@ class bert_dict_dataset(Dataset):
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
 
-            #self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)    ########## check
+            mimic_item_offset_order = list(mimic_item_offset_order)
+            eicu_item_offset_order = list(eicu_item_offset_order)
+            mimic_item_offset_order.extend(eicu_item_offset_order)
+            self.item_offset_order = pad_sequence(mimic_item_offset_order, batch_first=True)
 
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
