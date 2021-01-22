@@ -16,10 +16,10 @@ class dict_post_RNN(nn.Module):
         self.cls_freeze = args.cls_freeze
 
         if args.concat:
-            initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
+            initial_embed_weight = pickle.load(open(os.path.join(args.input_path +'embed_vocab_file', args.item,
                                                              '{}_{}_{}_{}_concat_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
         elif not args.concat:
-            initial_embed_weight = pickle.load(open(os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', args.item,
+            initial_embed_weight = pickle.load(open(os.path.join(args.input_path + 'embed_vocab_file', args.item,
                                                              '{}_{}_{}_{}_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
 
         self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
@@ -27,9 +27,9 @@ class dict_post_RNN(nn.Module):
         self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
         if args.rnn_model_type == 'gru':
-            self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
+            self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection, num_layers=n_layers)
         elif args.rnn_model_type == 'lstm':
-            self.model = nn.LSTM(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
+            self.model = nn.LSTM(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection, num_layers=n_layers)
 
         if self.bidirection:
             self.linear_1 = nn.Linear(num_directions * self.hidden_dim, self.hidden_dim)

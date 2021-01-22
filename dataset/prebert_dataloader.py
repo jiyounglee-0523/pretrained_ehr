@@ -60,7 +60,7 @@ class healthcare_dataset(Dataset):
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
         else:
-            path = '/home/jylee/data/pretrained_ehr/input_data/{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed)
+            path = args.input_path + '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, self.max_length, args.seed)
             data = pickle.load(open(path, 'rb'))
 
             # change column name
