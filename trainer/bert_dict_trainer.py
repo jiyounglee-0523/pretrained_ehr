@@ -6,6 +6,7 @@ import os
 import tqdm
 
 from models.rnn_bert_dict import dict_post_RNN
+from models.transformer import Transformer
 from utils.loss import *
 from utils.trainer_utils import *
 from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader
@@ -80,8 +81,10 @@ class bert_dict_Trainer():
             else:
                 output_size = 1
                 self.criterion = FocalLoss()
-
-        self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
+        if args.transformer:
+            self.model = Transformer(args, output_size, device, target_file=args.source_file)
+        elif not args.transformer:
+            self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
         self.early_stopping = EarlyStopping(patience=30, verbose=True)
