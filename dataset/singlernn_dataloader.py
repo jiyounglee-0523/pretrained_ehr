@@ -40,14 +40,14 @@ class eicu_dataset(Dataset):
 
         if source_file == 'both':
             if args.concat:
-                mimic_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                mimic_path = os.path.join(args.input_path[:-1], item,
                                     'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                eicu_path = os.path.join(args.input_path[:-1], item,
                                     'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
             elif not args.concat:
-                mimic_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                mimic_path = os.path.join(args.input_path[:-1], item,
                                     'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                eicu_path = os.path.join(args.input_path[:-1], item,
                                           'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
@@ -71,10 +71,10 @@ class eicu_dataset(Dataset):
 
         else:
             if args.concat:
-                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                path = os.path.join(args.input_path[:-1], item,
                                 '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, max_length, args.seed))
             elif not args.concat:
-                path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                path = os.path.join(args.input_path[:-1], item,
                                 '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
             data = pickle.load(open(path, 'rb'))
 
@@ -87,11 +87,11 @@ class eicu_dataset(Dataset):
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
         if args.concat:
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
                                       '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window,
                                                                                  args.bert_model))
         elif not args.concat:
-            vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item,
+            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
                                       '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window,
                                                                           args.bert_model))  ################### bert model?
 

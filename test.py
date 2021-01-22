@@ -53,15 +53,15 @@ class Few_Shot_Dataset(Dataset):
 
         if test_file == 'both':
             if args.concat:
-                mimic_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                mimic_path = os.path.join(args.input_path[:-1], item,
                                           'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length,
                                                                                 args.seed))
-                eicu_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                eicu_path = os.path.join(args.input_path[:-1], item,
                                          'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
             elif not args.concat:
-                mimic_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                mimic_path = os.path.join(args.input_path[:-1], item,
                                           'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
-                eicu_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                eicu_path = os.path.join(args.input_path[:-1], item,
                                          'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
@@ -86,19 +86,19 @@ class Few_Shot_Dataset(Dataset):
             few_shot = args.few_shot
             if few_shot == 0.0 or few_shot == 1.0:
                 if args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item,
+                    path = os.path.join(args.input_path[:-1], item,
                                         '{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window,
                                                                     item, self.max_length,
                                                                     args.seed))
                 elif not args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
+                    path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}.pkl'.format(test_file, time_window,
                                                                                                  item, self.max_length,
                                                                                                  args.seed))
             else:
                 if args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                    path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}_{}_concat.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
                 elif not args.concat:
-                    path = os.path.join('/home/jylee/data/pretrained_ehr/input_data', item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
+                    path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}_{}.pkl'.format(test_file, time_window, item, self.max_length, args.seed, int(few_shot * 100)))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -112,15 +112,15 @@ class Few_Shot_Dataset(Dataset):
 
         if source_file == 'both':
             if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, 'both_{}_{}_{}_concat_word2embed.pkl'.format(item, time_window, args.bert_model))
+                vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item, 'both_{}_{}_{}_concat_word2embed.pkl'.format(item, time_window, args.bert_model))
             elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, 'both_{}_{}_{}_word2embed.pkl'.format(item, time_window, args.bert_model))
+                vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item, 'both_{}_{}_{}_word2embed.pkl'.format(item, time_window, args.bert_model))
         else:
 
             if args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+                vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item, '{}_{}_{}_{}_concat_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
             elif not args.concat:
-                vocab_path = os.path.join('/home/jylee/data/pretrained_ehr/input_data/embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
+                vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item, '{}_{}_{}_{}_word2embed.pkl'.format(test_file, item, time_window, args.bert_model))
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
     def __len__(self):
