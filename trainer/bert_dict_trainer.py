@@ -82,7 +82,7 @@ class bert_dict_Trainer():
                 output_size = 1
                 self.criterion = FocalLoss()
         if args.transformer:
-            self.model = Transformer(args, output_size, device, target_file=args.source_file)
+            self.model = Transformer(args, output_size, device, target_file=args.source_file).to(self.device)
         elif not args.transformer:
             self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)

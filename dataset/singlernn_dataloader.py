@@ -119,7 +119,7 @@ class eicu_dataset(Dataset):
         embedding = []
 
         def embed_dict(x):
-            return self.id_dict[x]
+            return self.id_dict[x] + 1
         embedding = list(map(embed_dict, single_item_name))
         embedding = torch.Tensor(embedding)
 

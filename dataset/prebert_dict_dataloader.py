@@ -108,13 +108,13 @@ class bert_dict_dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
-        #single_order_offset = self.item_offset_order[item]
+        single_order_offset = self.item_offset_order[item]
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
 
         def embed_dict(x):
-            return self.id_dict[x]
+            return self.id_dict[x] + 1
         embedding = list(map(embed_dict, single_item_name))     # list with length seq_len
         embedding = torch.Tensor(embedding)
 
@@ -134,7 +134,8 @@ class bert_dict_dataset(Dataset):
         if not self.transformer:
             return embedding, single_target, seq_len
         elif self.transformer:
-            return embedding, single_target
+            return embedding, single_target, single_order_offset
+
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
