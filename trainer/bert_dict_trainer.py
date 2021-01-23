@@ -27,7 +27,7 @@ class bert_dict_Trainer():
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
+            wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -38,29 +38,53 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.cls_freeze:
-            if args.concat:
-                if args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
-            elif not args.concat:
-                if args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+        if not args.transformer:
+            if args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
-        elif not args.cls_freeze:
-            if args.concat:
-                if args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
-            elif not args.concat:
-                if args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+            elif not args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+        elif args.transformer:
+            if args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}'.format(args.bert_model, args.seed)
+            elif not args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}'.format(args.bert_model, args.seed)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
@@ -82,7 +106,8 @@ class bert_dict_Trainer():
                 output_size = 1
                 self.criterion = FocalLoss()
         if args.transformer:
-            self.model = Transformer(args, output_size, device, target_file=args.source_file)
+            self.model = Transformer(args, output_size, device, target_file=args.source_file, n_layer=args.transformer_layers,
+                                     attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
         elif not args.transformer:
             self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -217,7 +242,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -250,7 +278,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.mimic_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -279,7 +310,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.eicu_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()

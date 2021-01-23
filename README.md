@@ -192,3 +192,6 @@ v6.1: main.py : implemented test on test dataset in main.py
 
 v6.2: main.py: changed *input_path* as argument
 
+**v7.0**: implemented transformers, fixed test error in BCE 
+
+[TO-DO] implemente BCE and Transformer in test.py

@@ -20,7 +20,7 @@ class RNNmodels(nn.Module):
 
         self.device = device
 
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
         # self.embedding = nn.Sequential(nn.Embedding(vocab_size, 768, padding_idx=0),
         #                                nn.Linear(768, embedding_dim))
         if args.rnn_model_type == 'gru':

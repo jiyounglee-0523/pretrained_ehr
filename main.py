@@ -36,6 +36,9 @@ def main():
     parser.add_argument('--separate_overlapping_codes', action='store_true')
     parser.add_argument('--only_BCE', action='store_true')
     parser.add_argument('--transformer', action='store_true')
+    parser.add_argument('--transformer_layers', type=int, default=2)
+    parser.add_argument('--transformer_attn_heads', type=int, default=8)
+    parser.add_argument('--transformer_hidden_dim', type=int, default=256)
     args = parser.parse_args()
 
     # args.device_number = 6

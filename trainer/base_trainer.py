@@ -6,6 +6,7 @@ import os
 import tqdm
 
 from models.rnn_models import *
+from models.transformer import Transformer
 from utils.loss import *
 from utils.trainer_utils import *
 from dataset.singlernn_dataloader import singlernn_get_dataloader
@@ -27,7 +28,7 @@ class Trainer(nn.Module):
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
+            wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -38,16 +39,29 @@ class Trainer(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.concat: # reference: lines 66-78
-            if args.only_BCE:
-                filename = 'trained_single_rnn_{}_concat_onlyBCE'.format(args.seed)
-            elif not args.only_BCE:  # elif (vs. else) statement used for extra clarity
-                filename = 'trained_single_rnn_{}_concat'.format(args.seed)
-        elif not args.concat:
-            if args.only_BCE:
-                filename = 'trained_single_rnn_{}_onlyBCE'.format(args.seed)
-            elif not args.only_BCE:
-                filename = 'trained_single_rnn_{}'.format(args.seed)
+        if not args.transformer:     # file name for singleRNN
+            if args.concat: # reference: lines 66-78
+                if args.only_BCE:
+                    filename = 'trained_single_rnn_{}_concat_onlyBCE'.format(args.seed)
+                elif not args.only_BCE:  # elif (vs. else) statement used for extra clarity
+                    filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+            elif not args.concat:
+                if args.only_BCE:
+                    filename = 'trained_single_rnn_{}_onlyBCE'.format(args.seed)
+                elif not args.only_BCE:
+                    filename = 'trained_single_rnn_{}'.format(args.seed)
+        elif args.transformer:
+            if args.concat:
+                if args.only_BCE:
+                    filename = 'trained_transformer_{}_concat_onlyBCE'.format(args.seed)
+                elif not args.only_BCE:
+                    filename = 'trained_transformer_{}_concat'.format(args.seed)
+            elif not args.concat:
+                if args.only_BCE:
+                    filename = 'trained_transformer_{}_onlyBCE'.format(args.seed)
+                elif not args.only_BCE:
+                    filename = 'trained_transformer_{}'.format(args.seed)
+
         path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
 
@@ -96,7 +110,11 @@ class Trainer(nn.Module):
                 output_size = 1
                 self.criterion = FocalLoss()
 
-        self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
+        if args.transformer:
+            self.model = Transformer(args, output_size, device, target_file=args.source_file, vocab_size=vocab_size, n_layer=args.transformer_layers,
+                                     attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
+        if not args.transformer:
+            self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
         self.early_stopping = EarlyStopping(patience=30, verbose=True)
@@ -239,7 +257,11 @@ class Trainer(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -272,7 +294,10 @@ class Trainer(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.mimic_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -301,7 +326,10 @@ class Trainer(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.eicu_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()

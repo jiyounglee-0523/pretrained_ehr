@@ -61,7 +61,10 @@ class eicu_dataset(Dataset):
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
 
-            #self.item_offset_order = torch.cat((mimic_item_offset_order, eicu_item_offset_order), dim=0)
+            mimic_item_offset_order = list(mimic_item_offset_order)
+            eicu_item_offset_order = list(eicu_item_offset_order)
+            mimic_item_offset_order.extend(eicu_item_offset_order)
+            self.item_offset_order = pad_sequence(mimic_item_offset_order, batch_first=True)
 
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
@@ -103,7 +106,9 @@ class eicu_dataset(Dataset):
 
     def __getitem__(self, item):
         # single_item_offset = self.item_offset[item]
-        #single_order_offset = self.item_offset_order[item]
+        single_order_offset = self.item_offset_order[item]
+        padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
+        single_order_offset = torch.cat((single_order_offset, padding), dim=0)
         single_target = self.item_target[item]
 
         if self.target == 'dx_depth1_unique':
@@ -122,14 +127,19 @@ class eicu_dataset(Dataset):
             return self.id_dict[x]
         embedding = list(map(embed_dict, single_item_name))
         embedding = torch.Tensor(embedding)
+        if self.transformer:
+            embedding = embedding + 1
+            single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)   # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
+        if self.transformer:
+            embedding = torch.cat((torch.Tensor([1]), embedding), dim=0)   # 1 for cls
 
         if not self.transformer:
             return embedding, single_target, seq_len
         elif self.transformer:
-            return embedding, single_target
+            return embedding, single_target, single_order_offset
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         # time window
