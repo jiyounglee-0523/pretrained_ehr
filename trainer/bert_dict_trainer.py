@@ -106,7 +106,8 @@ class bert_dict_Trainer():
                 output_size = 1
                 self.criterion = FocalLoss()
         if args.transformer:
-            self.model = Transformer(args, output_size, device, target_file=args.source_file).to(self.device)
+            self.model = Transformer(args, output_size, device, target_file=args.source_file, n_layer=args.transformer_layers,
+                                     attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
         elif not args.transformer:
             self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -241,7 +242,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -274,7 +278,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.mimic_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -303,7 +310,10 @@ class bert_dict_Trainer():
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.eicu_test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
