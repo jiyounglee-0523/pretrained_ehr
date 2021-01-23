@@ -27,7 +27,7 @@ class bert_dict_Trainer():
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project='comparison-between-berts', entity="pretrained_ehr", config=args, reinit=True)
+            wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -38,29 +38,53 @@ class bert_dict_Trainer():
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.cls_freeze:
-            if args.concat:
-                if args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
-            elif not args.concat:
-                if args.only_BCE:
-                    filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+        if not args.transformer:
+            if args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
-        elif not args.cls_freeze:
-            if args.concat:
-                if args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
-            elif not args.concat:
-                if args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
-                elif not args.only_BCE:
-                    filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+            elif not args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+        elif args.transformer:
+            if args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_fixed_transformer_{}_{}'.format(args.bert_model, args.seed)
+            elif not args.cls_freeze:
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_concat'.format(args.bert_model, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'cls_learnable_transformer_{}_{}'.format(args.bert_model, args.seed)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))

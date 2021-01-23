@@ -109,18 +109,25 @@ class bert_dict_dataset(Dataset):
 
     def __getitem__(self, item):
         single_order_offset = self.item_offset_order[item]
+        padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
+        single_order_offset = torch.cat((single_order_offset, padding), dim=0)
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
 
         def embed_dict(x):
-            return self.id_dict[x] + 1
+            return self.id_dict[x]
         embedding = list(map(embed_dict, single_item_name))     # list with length seq_len
         embedding = torch.Tensor(embedding)
+        if self.transformer:
+            embedding = embedding + 1
+            single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)    # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
         assert list(embedding.shape)[0] == int(self.max_length), "padding wrong!"
+        if self.transformer:
+            embedding = torch.cat((torch.Tensor([1]), embedding), dim=0)    # 1 for cls
 
         single_target = self.item_target[item]
         if self.target == 'dx_depth1_unique':

@@ -16,6 +16,7 @@ import tqdm
 from models.rnn_bert_dict import *
 from models.rnn_models import *
 from models.prebert import *
+from models.transformer import Transformer
 from utils.loss import *
 from utils.trainer_utils import *
 
@@ -221,6 +222,7 @@ class Tester(nn.Module):
         self.test_dataloader = test_dataloader
         self.device = device
         self.debug = args.debug
+        self.BCE = args.only_BCE
 
         if not self.debug:
             wandb.init(project='test_among_berts', entity='pretrained_ehr', config=args, reinit=True)
@@ -228,12 +230,19 @@ class Tester(nn.Module):
         lr = args.lr
         self.n_epochs = args.n_epochs
 
-        if args.target == 'dx_depth1_unique':
-            output_size = 18
+        if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()
-        else:
-            output_size = 1
-            self.criterion = FocalLoss()
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+            else:
+                output_size = 1
+        elif not args.only_BCE:
+            if args.target == 'dx_depth1_unique':
+                output_size = 18
+                self.criterion = nn.BCEWithLogitsLoss()
+            else:
+                output_size = 1
+                self.criterion = FocalLoss()
 
         file_target_name = args.target
         if file_target_name == 'los>3day':
@@ -241,8 +250,7 @@ class Tester(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-
-        if args.bert_induced and args.bert_freeze and not args.cls_freeze:
+        if args.bert_induced and args.bert_freeze and not args.cls_freeze and not args.transformer:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
@@ -254,7 +262,7 @@ class Tester(nn.Module):
             elif not args.concat:
                 filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
-        elif args.bert_induced and args.bert_freeze and args.cls_freeze:
+        elif args.bert_induced and args.bert_freeze and args.cls_freeze and not args.transformer:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
@@ -266,7 +274,7 @@ class Tester(nn.Module):
             elif not args.concat:
                 filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
-        elif args.bert_induced and not args.bert_freeze:
+        elif args.bert_induced and not args.bert_freeze and not args.transformer:
             model_directory = 'bert_finetune'
             self.model = post_RNN(args=args, output_size=output_size).to(device)
             print('bert finetuning')
@@ -303,22 +311,36 @@ class Tester(nn.Module):
                         vocab_size = 495
                     elif args.item == 'all':
                         vocab_size = 8532 if args.concat else 1344
-
-            self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
-            print('single rnn')
-
-            if args.concat:
-                filename = 'trained_single_rnn_{}_concat'.format(args.seed)
-            elif not args.concat:
-                filename = 'trained_single_rnn_{}'.format(args.seed)
+            if not args.transformer:
+                self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
+                print('single rnn')
+                if args.concat:
+                    filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+                elif not args.concat:
+                    filename = 'trained_single_rnn_{}'.format(args.seed)
+            elif args.transformer:
+                if args.source_file == 'both':
+                    self.model = Transformer(args, output_size, self.device, target_file='both', vocab_size=vocab_size)
+                else:
+                    self.model = Transformer(args, output_size, self.device, target_file=args.test_file, vocab_size=vocab_size)
 
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
-        if args.concat:
-            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
-                                                                             args.test_file, args.bert_model, seed)
-        elif not args.concat:
-            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+#######################################################################################################
+################ change target_filename!!! There are so many :(  (cls_freeze/learnable,   BCE/Focal , Transformer/RNN, Concat/Nonconcat)
+
+        if not args.transformer:
+            if args.concat:
+                target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
+                                                                                 args.test_file, args.bert_model, seed)
+            elif not args.concat:
+                target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+        elif args.transformer:
+            if args.concat:
+                target_filename = 'transformer_few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
+                                                                                 args.test_file, args.bert_model, seed)
+            elif not args.concat:
+                target_filename = 'transformer_few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
         target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
 
@@ -421,7 +443,7 @@ class Tester(nn.Module):
                                 'auroc': best_auroc,
                                 'auprc': best_auprc,
                                 'epochs': n_epoch}, self.final_path)
-
+                self.test()
                 break
 
     def evaluation(self):
@@ -450,9 +472,8 @@ class Tester(nn.Module):
 
         return avg_eval_loss, auroc_eval, auprc_eval
 
+    def zero_shot_test(self):
 
-
-    def test(self):
         self.model.eval()
 
         preds_test = []
@@ -484,7 +505,40 @@ class Tester(nn.Module):
             print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
                                                                                      auprc_test))
 
-        return avg_test_loss, auroc_test, auprc_test
+
+    def test(self):
+        ckpt = torch.load(self.best_target_path)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model.eval()
+
+        preds_test = []
+        truths_test = []
+        avg_test_loss = 0.
+
+        with torch.no_grad():
+            for iter, sample in enumerate(self.test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.test_dataloader)
+
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test)
+
+            if not self.debug:
+                wandb.log({'test_loss': avg_test_loss,
+                           'test_auroc': auroc_test,
+                           'test_auprc': auprc_test})
+
+            print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test,
+                                                                                     auprc_test))
 
 
 def main():
@@ -513,6 +567,8 @@ def main():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
+    parser.add_argument('--only_BCE', action='store_true')
+    parser.add_argument('--transformer', action='store_true')
 
 
     args = parser.parse_args()
@@ -553,11 +609,10 @@ def main():
 
         if args.few_shot == 0.0:
             print('Only test')
-            tester.test()
+            tester.zero_shot_test()
         else:
             print('Train then test')
             tester.train()
-            tester.test()
 
 if __name__ == '__main__':
     main()
