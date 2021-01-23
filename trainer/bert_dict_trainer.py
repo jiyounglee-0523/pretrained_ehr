@@ -105,6 +105,7 @@ class bert_dict_Trainer():
             else:
                 output_size = 1
                 self.criterion = FocalLoss()
+
         if args.transformer:
             self.model = Transformer(args, output_size, device, target_file=args.source_file, n_layer=args.transformer_layers,
                                      attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)

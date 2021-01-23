@@ -23,7 +23,6 @@ def bertinduced_dict_get_dataloader(args, data_type='train', data_name=None):
     elif data_type == 'test':
         test_data = bert_dict_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
-
     return dataloader
 
 
