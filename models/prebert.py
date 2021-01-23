@@ -28,10 +28,9 @@ class ClinicalBERT(nn.Module):
 
 
 class post_RNN(nn.Module):
-    def __init__(self, args, output_size, criterion, n_layers=1):
+    def __init__(self, args, output_size, n_layers=1):
         super().__init__()
         bert_model = args.bert_model
-        self.criterion = criterion
 
         if bert_model == 'bio_clinical_bert':
             self.prebert = ClinicalBERT(args.word_max_length)
@@ -68,15 +67,17 @@ class post_RNN(nn.Module):
         # y
         # goes through prebert
 
-        if self.freeze:
-            with torch.no_grad():
-                x = self.prebert(x)
-                x = x.detach()
-        else:
-            x = self.prebert(x)
+        self.model.flatten_parameters()
+
+        # if self.freeze:
+        #     with torch.no_grad():
+        #         x = self.prebert(x)
+        #         x = x.detach()
+
+        x = self.prebert(x)
 
         x = x.reshape(-1, 150, 768)     # hard coding!
-        lengths = lengths.squeeze().long().cpu()
+        lengths = lengths.squeeze(1).long().cpu()
         B = x.size(0)
 
         x = self.embed_fc(x)    # B, S, embedding_dim
@@ -95,36 +96,5 @@ class post_RNN(nn.Module):
         #     output = self.linear_1(output)
 
         output = self.output_fc(output)
-      #  loss = self.criterion(output, y.float().to(x.device))
-
-        return output #loss
-
-    def predict(self, x, lengths):
-        # y
-        # goes through prebert
-
-        if self.freeze:
-            with torch.no_grad():
-                x = self.prebert(x)
-                x = x.detach()
-        else:
-            x = self.prebert(x)
-
-        x = x.reshape(-1, 150, 768)     # hard coding!
-        lengths = lengths.squeeze().long()
-        B = x.size(0)
-
-        x = self.embed_fc(x)    # B, S, embedding_dim
-        packed = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
-        output, hidden = self.model(packed)
-        output_seq, output_len = pad_packed_sequence(output, batch_first=True)
-
-        i = range(B)
-
-        # if not self.bidirection:
-        output = output_seq[i, lengths -1, :]
-
-        output = self.output_fc(output)
-
         return output
 

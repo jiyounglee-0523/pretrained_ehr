@@ -194,4 +194,9 @@ v6.2: main.py: changed *input_path* as argument
 
 **v7.0**: implemented transformers, fixed test error in BCE 
 
-[TO-DO] implemente BCE and Transformer in test.py
+v7.1: implemented BERT finetuning for RNN models
+
+[TO-DO] implement BCE and Transformer in test.py
+
+​                implement Transformer in BERT finetuning
+
