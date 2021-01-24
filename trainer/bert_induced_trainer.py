@@ -33,8 +33,8 @@ class Bert_Trainer():
         self.n_epochs = args.n_epochs
 
         file_target_name = args.target
-        if file_target_name == 'los>3days':
-            file_target_name = 'los_3day'
+        if file_target_name == 'los>3day':
+            file_target_name = 'los_3days'
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 

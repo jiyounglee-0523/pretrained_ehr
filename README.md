@@ -196,6 +196,8 @@ v6.2: main.py: changed *input_path* as argument
 
 v7.1: implemented BERT finetuning for RNN models
 
+v7.2: added label processing files
+
 [TO-DO] implement BCE and Transformer in test.py
 
 ​                implement Transformer in BERT finetuning

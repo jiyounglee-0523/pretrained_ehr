@@ -9,8 +9,8 @@ SRC_PATH = PATH+'main.py'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
 
 
-target_list = ['mortality', 'los>3day', 'mortality', 'los>3day']
-source_file_list = ['mimic', 'mimic', 'eicu', 'eicu']
+target_list = ['los>3day', 'mortality', 'los>3day']
+source_file_list = ['mimic', 'eicu', 'eicu']
 
 for i in range(len(target_list)):
    TRAINING_CONFIG = {
