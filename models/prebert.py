@@ -69,12 +69,12 @@ class post_RNN(nn.Module):
 
         self.model.flatten_parameters()
 
-        # if self.freeze:
-        #     with torch.no_grad():
-        #         x = self.prebert(x)
-        #         x = x.detach()
+        if self.freeze:
+            with torch.no_grad():
+                x = self.prebert(x)
 
-        x = self.prebert(x)
+        else:
+            x = self.prebert(x)
 
         x = x.reshape(-1, 150, 768)     # hard coding!
         lengths = lengths.squeeze(1).long().cpu()
