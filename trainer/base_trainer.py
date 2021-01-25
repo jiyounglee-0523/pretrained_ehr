@@ -53,14 +53,18 @@ class Trainer(nn.Module):
         elif args.transformer:
             if args.concat:
                 if args.only_BCE:
-                    filename = 'trained_transformer_{}_concat_onlyBCE'.format(args.seed)
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
                 elif not args.only_BCE:
-                    filename = 'trained_transformer_{}_concat'.format(args.seed)
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
             elif not args.concat:
                 if args.only_BCE:
-                    filename = 'trained_transformer_{}_onlyBCE'.format(args.seed)
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
                 elif not args.only_BCE:
-                    filename = 'trained_transformer_{}'.format(args.seed)
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
 
         path = os.path.join(args.path, args.item ,'singleRNN', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
@@ -111,9 +115,11 @@ class Trainer(nn.Module):
                 self.criterion = FocalLoss()
 
         if args.transformer:
+            print('Transformer')
             self.model = Transformer(args, output_size, device, target_file=args.source_file, vocab_size=vocab_size, n_layer=args.transformer_layers,
                                      attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
         if not args.transformer:
+            print('RNN')
             self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 

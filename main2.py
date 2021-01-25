@@ -39,6 +39,7 @@ def main():
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
+    parser.add_argument('--seed', type=int)
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -80,9 +81,9 @@ def main():
 
     mp.set_sharing_strategy('file_system')
 
-    SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
+    #SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
 
-    for seed in SEED:
+    for seed in [args.seed]:
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)

@@ -17,10 +17,11 @@ for i in range(len(target_list)):
        "bert_induced": True,
        "source_file": source_file_list[i],
        "target": target_list[i],
-       "batch_size": 48,
+       "batch_size": 512,
        "bert_model": 'bio_clinical_bert',
        "device_number": '0,1,2,3,4,5,6,7',
        "concat": True,
+       "bert_freeze": True
    }
 
    TRAINING_CONFIG_LIST = ["--{}".format(k) if (isinstance(v, bool) and (v)) else "--{}={}".format(k,v) for (k,v) in list(TRAINING_CONFIG.items())]

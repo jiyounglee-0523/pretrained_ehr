@@ -42,7 +42,7 @@ class Bert_Trainer():
             if args.only_BCE:
                 filename = 'bert_finetune_{}_rnn_{}_onlyBCE'.format(args.bert_model, args.seed)
             elif not args.only_BCE:
-                filename = 'bert_finetune_{}_rnn_{}'.format(args.bert_model, args.seed)
+                filename = 'bert_finetune_bertfreeze_{}_rnn_{}'.format(args.bert_model, args.seed)
         elif args.transformer:
             if args.only_BCE:
                 filename = 'bert_finetune_{}_transformer_{}_onlyBCE'.format(args.bert_model, args.seed)
