@@ -27,7 +27,10 @@ class bert_dict_Trainer():
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
+            if args.transformer:
+                wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
+            elif not args.transformer:
+                wandb.init(project='jylee_lab', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -160,7 +163,7 @@ class bert_dict_Trainer():
                 truths_train += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_train = roc_auc_score(truths_train, preds_train)
-            auprc_train = average_precision_score(truths_train, preds_train)
+            auprc_train = average_precision_score(truths_train, preds_train, average='micro')
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
@@ -231,7 +234,7 @@ class bert_dict_Trainer():
                 truths_eval += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_eval = roc_auc_score(truths_eval, preds_eval)
-            auprc_eval = average_precision_score(truths_eval, preds_eval)
+            auprc_eval = average_precision_score(truths_eval, preds_eval, average='micro')
 
         return avg_eval_loss, auroc_eval, auprc_eval
 
@@ -262,7 +265,7 @@ class bert_dict_Trainer():
                 truths_test += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_test = roc_auc_score(truths_test, preds_test)
-            auprc_test = average_precision_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test, average='micro')
 
             if not self.debug:
                 wandb.log({'test_loss': avg_test_loss,
@@ -298,7 +301,7 @@ class bert_dict_Trainer():
                 truths_test += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_test = roc_auc_score(truths_test, preds_test)
-            auprc_test = average_precision_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test, average='micro')
 
             if not self.debug:
                 wandb.log({'mimic_test_loss': avg_test_loss,
@@ -330,7 +333,7 @@ class bert_dict_Trainer():
                 truths_test += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_test = roc_auc_score(truths_test, preds_test)
-            auprc_test = average_precision_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test, average='micro')
 
             if not self.debug:
                 wandb.log({'eicu_test_loss': avg_test_loss,
