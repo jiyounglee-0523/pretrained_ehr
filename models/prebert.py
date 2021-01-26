@@ -5,11 +5,14 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import transformers
 from transformers import AutoTokenizer, AutoModel
 
+import math
+
+
 class ClinicalBERT(nn.Module):
     def __init__(self, word_max_length):
         super().__init__()
         self.word_max_length = word_max_length
-        self.model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+        self.model = AutoModel.from_pretrained("prajjwal1/bert-tiny")
 
     def forward(self, x):
         # reshape (B, S, W) -> (B*S, W)
@@ -97,4 +100,86 @@ class post_RNN(nn.Module):
 
         output = self.output_fc(output)
         return output
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, embedding_dimension, dropout, max_len):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        max_len = int(max_len)
+
+        pe = torch.zeros(max_len + 1, embedding_dimension)   # +1 for cls and pad positional embedding
+        position = torch.arange(0, max_len + 1, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embedding_dimension, 2).float() * (-math.log(10000.0) / embedding_dimension))
+
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        # pe shape of (max_length, dimension)
+
+        self.positional_embed = nn.Embedding(int(max_len)+1, embedding_dimension, _weight=pe)     # padding_index=0을 해줘야 하나?
+
+    def forward(self, x, offset_order):
+        # x, shape of (max_length, batch_size, dimension)
+        # offset_order, shape of (batch_size, max_length)
+        offset_order = offset_order.transpose(0, 1).long()    # shape of (max_length, batch_size)
+
+        with torch.no_grad():
+            positional_embed = self.positional_embed(offset_order)
+        x = x + positional_embed
+
+        output = self.dropout(x)    # shape of (max_len, batch_size, dimension)
+        return output
+
+class post_Transformer(nn.Module):
+    def __init__(self, args, output_size, device, n_layers=2, attn_head=8, hidden_dim=256):
+        super().__init__()
+        dropout = args.dropout
+        self.max_length = args.max_length
+        self.device = device
+        self.freeze = args.bert_freeze
+
+        if args.bert_model == 'bert_tiny':
+            self.prebert = ClinicalBERT(args.word_max_length)
+
+        if args.bert_freeze == True:
+            for param in self.prebert.parameters():
+                param.requires_grad = False
+
+        elif args.bert_freeze == False:
+            for param in self.prebert.parameters():
+                param.requires_grad = True
+
+        self.max_length = int(args.max_length)
+        self.hidden_dim = args.hidden_dim
+
+        self.pos_encoder = PositionalEncoding(128, dropout, args.max_length).to(device)
+        encoder_layers = nn.TransformerEncoderLayer(128, attn_head, hidden_dim, dropout)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=n_layers)
+
+        self.output_fc = nn.Linear(128, output_size)
+
+    def forward(self, x, offset_order):
+        #offset_order, shape of (batch_size, max_length)
+        src_key_padding_mask = ((x['attention_mask']==0) * 1).clone().detach().bool().to(self.device)
+
+        if self.freeze:
+            with torch.no_grad():
+                x = self.prebert(x)
+        else:
+            x = self.prebert(x)
+
+        x = x.reshape(-1, self.max_length, 128)    # check shape change
+        x = x.permute(1, 0, 2)    # x, shape of (seq_len, batch_size, dimension)
+        x = self.pos_encoder(x, offset_order)
+
+        output = self.transformer_encoder(src=x, src_key_padding_mask=src_key_padding_mask)
+        output = output[0]
+        output = self.output_fc(output)
+        return output
+
+
+
+
+
+
+
 

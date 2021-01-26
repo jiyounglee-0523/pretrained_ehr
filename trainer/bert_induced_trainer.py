@@ -69,7 +69,7 @@ class Bert_Trainer():
                 output_size = 1
                 self.criterion = FocalLoss()
         if args.transformer:
-            self.model = nn.DataParallel(Transformer(args, output_size, device, target_file=args.source_file, n_layer=args.transformer_layers,
+            self.model = nn.DataParallel(post_Transformer(args, output_size, device, n_layers=args.transformer_layers,
                                                      attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)).to(self.device)
         elif not args.transformer:
             self.model = nn.DataParallel(post_RNN(args, output_size)).to(self.device)

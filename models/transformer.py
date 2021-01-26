@@ -25,8 +25,6 @@ class PositionalEncoding(nn.Module):
 
         self.positional_embed = nn.Embedding(int(max_len)+1, embedding_dimension, _weight=pe)     # padding_index=0을 해줘야 하나?
 
-
-
     def forward(self, x, offset_order):
         # x, shape of (max_length, batch_size, dimension)
         # offset_order, shape of (batch_size, max_length)
@@ -34,7 +32,7 @@ class PositionalEncoding(nn.Module):
 
         with torch.no_grad():
             positional_embed = self.positional_embed(offset_order)
-            x = x + positional_embed
+        x = x + positional_embed
 
         output = self.dropout(x)    # shape of (max_len, batch_size, dimension)
         return output
@@ -61,7 +59,7 @@ class Transformer(nn.Module):
             initial_embed_weight = torch.cat((torch.zeros(1, initial_embed_weight.size(1)), torch.randn(1, initial_embed_weight.size(1)), initial_embed_weight), dim=0)
 
             self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight, padding_idx=0)
-            self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
+            #self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
         # singleTransformer
         elif not args.bert_induced:
@@ -76,7 +74,7 @@ class Transformer(nn.Module):
 
 
     def forward(self, x, offset_order):
-        # lengths, shape of (batch_size, max_length)
+        # offset_order, shape of (batch_size, max_length)
         src_key_padding_mask = ((x==0) * 1).clone().detach().bool().to(self.device)
         x = x.long().to(self.device)
         offset_order = offset_order.to(x.device)
@@ -87,7 +85,7 @@ class Transformer(nn.Module):
                     x = self.embed(x).to(self.device)
             elif not self.cls_freeze:
                 x = self.embed(x).to(self.device)
-            x = self.compress_fc(x)
+            #x = self.compress_fc(x)
 
         elif not self.bert_induced:
             x = self.embed(x).to(self.device)

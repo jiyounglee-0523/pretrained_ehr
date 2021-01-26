@@ -88,7 +88,7 @@ class healthcare_dataset(Dataset):
 
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
-        self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+        self.tokenizer = AutoTokenizer.from_pretrained("google/bert_uncased_L-2_H-128_A-2")
 
     def __len__(self):
         return len(self.item_name)
@@ -119,8 +119,10 @@ class healthcare_dataset(Dataset):
             single_target = torch.zeros(18)
             single_target[target_list - 1] = 1     # shape of 18
 
-        # implement single_length later
-        return single_item_name, single_target, seq_len
+        if not self.transformer:
+            return single_item_name, single_target, seq_len
+        if self.transformer:
+            return single_item_name, single_target, single_order_offset
 
 
     def preprocess(self, cohort, data_type, item, time_window, target):
