@@ -28,9 +28,9 @@ class bert_dict_Trainer():
 
         if not self.debug:
             if args.transformer:
-                wandb.init(project='transformer_train', entity="pretrained_ehr", config=args, reinit=True)
-            elif not args.transformer:
-                wandb.init(project='jylee_lab', entity="pretrained_ehr", config=args, reinit=True)
+                wandb.init(project='bert_tiny', entity="pretrained_ehr", config=args, reinit=True)
+            # elif not args.transformer:
+            #     wandb.init(project='jylee_lab', entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -118,9 +118,11 @@ class bert_dict_Trainer():
                 self.criterion = FocalLoss()
 
         if args.transformer:
+            print('Transformer')
             self.model = Transformer(args, output_size, device, target_file=args.source_file, n_layer=args.transformer_layers,
                                      attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
         elif not args.transformer:
+            print('RNN')
             self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
