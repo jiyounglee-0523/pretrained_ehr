@@ -2,15 +2,15 @@ import subprocess
 import os
 
 # Configuration before run
-device = 1
+device = 4
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-source_file_list = ['both']
-target_list = ['dx_depth1_unique']
+source_file_list = ['mimic']
+target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
 
 for source_file in source_file_list:
     for target in target_list:
