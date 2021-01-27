@@ -189,10 +189,10 @@ class Bert_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.valid_dataloader):
-                item_name, item_target, seq_len = sample
+                item_name, item_target, offset_order, masking = sample
                 item_target = item_target.to(self.device)
 
-                y_pred = self.model(item_name, seq_len)
+                y_pred = self.model(item_name, offset_order, masking)
 
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
@@ -220,10 +220,10 @@ class Bert_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.test_dataloader):
-                item_name, item_target, seq_len = sample
+                item_name, item_target, offset_order, masking = sample
                 item_target = item_target.to(self.device)
 
-                y_pred = self.model(item_name, seq_len)
+                y_pred = self.model(item_name, offset_order, masking)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
@@ -254,10 +254,10 @@ class Bert_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.mimic_test_dataloader):
-                item_id, item_target, seq_len = sample
+                item_name, item_target, offset_order, masking = sample
                 item_target.to(self.device)
 
-                y_pred = self.model(item_id, seq_len)
+                y_pred = self.model(item_name, offset_order, masking)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
@@ -284,10 +284,10 @@ class Bert_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.eicu_test_dataloader):
-                item_id, item_target, seq_len = sample
+                item_name, item_target, offset_order, masking = sample
                 item_target.to(self.device)
 
-                y_pred = self.model(item_id, seq_len)
+                y_pred = self.model(item_name, offset_order, masking)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:

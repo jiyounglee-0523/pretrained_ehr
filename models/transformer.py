@@ -55,21 +55,24 @@ class Transformer(nn.Module):
             elif not args.concat:
                 initial_embed_weight = pickle.load(open(os.path.join(args.input_path + 'embed_vocab_file', args.item,
                                                                      '{}_{}_{}_{}_cls_initialized.pkl'.format(target_file, args.item, args.time_window, args.bert_model)), 'rb'))
+
             initial_embed_weight = initial_embed_weight[1:, :]
             initial_embed_weight = torch.cat((torch.zeros(1, initial_embed_weight.size(1)), torch.randn(1, initial_embed_weight.size(1)), initial_embed_weight), dim=0)
 
             self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight, padding_idx=0)
             #self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
+            embedding_dimension = initial_embed_weight.size(1)
 
         # singleTransformer
         elif not args.bert_induced:
             self.embed = nn.Embedding(vocab_size + 1, args.embedding_dim, padding_idx=0)
+            embedding_dimension = args.embedding_dim
 
-        self.pos_encoder = PositionalEncoding(args.embedding_dim, dropout, args.max_length).to(device)
-        encoder_layers = nn.TransformerEncoderLayer(args.embedding_dim, attn_head, hidden_dim, dropout)
+        self.pos_encoder = PositionalEncoding(embedding_dimension, dropout, args.max_length).to(device)
+        encoder_layers = nn.TransformerEncoderLayer(embedding_dimension, attn_head, hidden_dim, dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=n_layer)
 
-        self.output_fc = nn.Linear(args.embedding_dim, output_size)
+        self.output_fc = nn.Linear(embedding_dimension, output_size)
 
 
 

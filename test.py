@@ -256,11 +256,40 @@ class Tester(nn.Module):
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
             else:
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
-            print('bert freeze, cls_learnable')
+            print('bert freeze, cls_learnable, transformer')
             if args.concat:
-                filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
-                filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
+
+        elif args.bert_induced and args.bert_freeze and not args.cls_freeze and args.transformer:
+            model_directory = 'cls_learnable'
+            if args.source_file == 'both':
+                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+            else:
+                self.model = Transformer(args, output_size, self.device, target_file=args.test_file, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+            print('bert freeze, cls_learnable, transformer')
+            if args.concat:
+                if args.only_BCE:
+                    filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                            args.transformer_hidden_dim, args.bert_model, args.seed)
+            elif not args.concat:
+                if args.only_BCE:
+                    filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                            args.transformer_hidden_dim, args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                        args.transformer_hidden_dim, args.bert_model, args.seed)
+
 
         elif args.bert_induced and args.bert_freeze and args.cls_freeze and not args.transformer:
             model_directory = 'cls_learnable'
@@ -268,11 +297,40 @@ class Tester(nn.Module):
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
             else:
                 self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.test_file).to(device)
-            print('bert freeze, cls_freeze')
+            print('bert freeze, cls_freeze, RNN')
             if args.concat:
-                filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_concat_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
-                filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+                if args.only_BCE:
+                    filename = 'cls_fixed_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
+
+        elif args.bert_induced and args.bert_freeze and args.cls_freeze and args.transformer:
+            model_directory = 'cls_learnable'
+            if args.source_file == 'both':
+                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+            else:
+                self.model = Transformer(args, output_size, self.device, target_file=args.test_file, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
+                                         hidden_dim=args.transformer_hidden_dim)
+            print('bert freeze, cls_freeze, Transformer')
+            if args.concat:
+                if args.only_BCE:
+                    filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                        args.transformer_hidden_dim, args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                        args.transformer_hidden_dim, args.bert_model, args.seed)
+            elif not args.concat:
+                if args.only_BCE:
+                    filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                        args.transformer_hidden_dim, args.bert_model, args.seed)
+                elif not args.only_BCE:
+                    filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                        args.transformer_hidden_dim, args.bert_model, args.seed)
 
         elif args.bert_induced and not args.bert_freeze and not args.transformer:
             model_directory = 'bert_finetune'
@@ -315,14 +373,37 @@ class Tester(nn.Module):
                 self.model = RNNmodels(args, vocab_size, output_size, self.device).to(device)
                 print('single rnn')
                 if args.concat:
-                    filename = 'trained_single_rnn_{}_concat'.format(args.seed)
+                    if args.only_BCE:
+                        filename = 'trained_single_rnn_{}_concat_onlyBCE'.format(args.seed)
+                    elif not args.only_BCE:
+                        filename = 'trained_single_rnn_{}_concat'.format(args.seed)
                 elif not args.concat:
-                    filename = 'trained_single_rnn_{}'.format(args.seed)
+                    if args.concat:
+                        filename = 'trained_single_rnn_{}_onlyBCE'.format(args.seed)
+                    elif not args.concat:
+                        filename = 'trained_single_rnn_{}'.format(args.seed)
             elif args.transformer:
+                print('single Transformer')
                 if args.source_file == 'both':
-                    self.model = Transformer(args, output_size, self.device, target_file='both', vocab_size=vocab_size)
+                    self.model = Transformer(args, output_size, self.device, target_file='both', vocab_size=vocab_size, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
+                                         hidden_dim=args.transformer_hidden_dim)
                 else:
-                    self.model = Transformer(args, output_size, self.device, target_file=args.test_file, vocab_size=vocab_size)
+                    self.model = Transformer(args, output_size, self.device, target_file=args.test_file, vocab_size=vocab_size, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
+                                         hidden_dim=args.transformer_hidden_dim)
+                if args.concat:
+                    if args.only_BCE:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                            args.transformer_hidden_dim, args.seed)
+                elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed)
+                    elif not args.only_BCE:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                            args.transformer_hidden_dim, args.seed)
 
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
@@ -331,16 +412,67 @@ class Tester(nn.Module):
 
         if not args.transformer:
             if args.concat:
-                target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
+                if args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed_concat_onlyBCE'.format(args.few_shot, args.source_file,
+                                                                                 args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed_concat'.format(args.few_shot, args.source_file,
+                                                                                 args.test_file, args.bert_model, seed)
+                elif not args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat_onlyBCE'.format(args.few_shot, args.source_file,
+                                                                                 args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
                                                                                  args.test_file, args.bert_model, seed)
             elif not args.concat:
-                target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+                if args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed_onlyBCE'.format(args.few_shot, args.source_file,
+                            args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                         args.bert_model, seed)
+                elif not args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_onlyBCE'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                 args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                args.bert_model, seed)
         elif args.transformer:
             if args.concat:
-                target_filename = 'transformer_few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file,
-                                                                                 args.test_file, args.bert_model, seed)
+                if args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_clsfixed_concat_onlyBCE'.format(args.few_shot, args.source_file,
+                            args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_clsfixed_concat'.format(args.few_shot, args.source_file,
+                            args.test_file, args.bert_model, seed)
+                elif not args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_concat_onlyBCE'.format(args.few_shot, args.source_file,
+                            args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                args.bert_model, seed)
             elif not args.concat:
-                target_filename = 'transformer_few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file, args.bert_model, seed)
+                if args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_clsfixed_onlyBCE'.format(args.few_shot, args.source_file,
+                            args.test_file, args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_clsfixed'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                  args.bert_model, seed)
+                elif not args.cls_freeze:
+                    if args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_onlyBCE'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                 args.bert_model, seed)
+                    elif not args.only_BCE:
+                        target_filename = 'few_shot_trans{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file, args.test_file,
+                                                                                                      args.bert_model, seed)
+
         target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
 

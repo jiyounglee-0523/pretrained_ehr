@@ -6,21 +6,21 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-device = 1
+device = 2
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
-target_list = ['dx_depth1_unique']
+target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
 
 for target in target_list:
    TRAINING_CONFIG = {
        "bert_induced": True,
-       "source_file": 'mimic',
-       "item": 'med',
-       "max_length": 150,
+       "source_file": 'both',
+       "item": 'all',
+       "max_length": 300,
        "bert_freeze": True,
        "target": target,
-       "bert_model": 'bert_tiny',
+       "bert_model": 'bert',
        "device_number": device,
        "only_BCE": True,
        "transformer": True,
