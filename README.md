@@ -200,6 +200,8 @@ v7.2: added label processing files
 
 v7.3 : Bert mini Bert Tiny
 
+v6.4: Bert Tiny finetune
+
 [TO-DO] implement BCE and Transformer in test.py
 
 ​                implement Transformer in BERT finetuning
