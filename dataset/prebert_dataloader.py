@@ -97,6 +97,8 @@ class healthcare_dataset(Dataset):
         single_order_offset = self.item_offset_order[item]
         padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
         single_order_offset = torch.cat((single_order_offset, padding), dim=0)
+        if self.transformer:
+            single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)    # 0 for cls
 
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
@@ -119,7 +121,7 @@ class healthcare_dataset(Dataset):
             single_target = torch.zeros(18)
             single_target[target_list - 1] = 1     # shape of 18
 
-        padding_mask = torch.cat((torch.zeros(int(seq_len)), torch.ones(int(self.max_length) - int(seq_len))))
+        padding_mask = torch.cat((torch.zeros(int(seq_len)+1), torch.ones(int(self.max_length) - int(seq_len))))
 
         if not self.transformer:
             return single_item_name, single_target, seq_len

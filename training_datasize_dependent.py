@@ -175,7 +175,7 @@ class DataSize_Trainer():
                 truths_train += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_train = roc_auc_score(truths_train, preds_train)
-            auprc_train = average_precision_score(truths_train, preds_train)
+            auprc_train = average_precision_score(truths_train, preds_train, average='micro')
 
             avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
@@ -239,7 +239,7 @@ class DataSize_Trainer():
                 truths_eval += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_eval = roc_auc_score(truths_eval, preds_eval)
-            auprc_eval = average_precision_score(truths_eval, preds_eval)
+            auprc_eval = average_precision_score(truths_eval, preds_eval, average='micro')
 
         return avg_eval_loss, auroc_eval, auprc_eval
 
@@ -267,7 +267,7 @@ class DataSize_Trainer():
                 truths_test += list(item_target.detach().cpu().numpy().flatten())
 
             auroc_test = roc_auc_score(truths_test, preds_test)
-            auprc_test = average_precision_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test, average='micro')
 
             if not self.debug:
                 wandb.log({'test_loss': avg_test_loss,

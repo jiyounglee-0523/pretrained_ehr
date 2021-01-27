@@ -129,6 +129,7 @@ class PositionalEncoding(nn.Module):
         output = self.dropout(x)    # shape of (max_len, batch_size, dimension)
         return output
 
+
 class post_Transformer(nn.Module):
     def __init__(self, args, output_size, device, n_layers=2, attn_head=8, hidden_dim=256):
         super().__init__()
@@ -151,15 +152,17 @@ class post_Transformer(nn.Module):
         self.max_length = int(args.max_length)
         self.hidden_dim = args.hidden_dim
 
+        self.cls_embed = nn.Embedding(1, 128)
         self.pos_encoder = PositionalEncoding(128, dropout, args.max_length).to(device)
         encoder_layers = nn.TransformerEncoderLayer(128, attn_head, hidden_dim, dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=n_layers)
 
         self.output_fc = nn.Linear(128, output_size)
 
-    def forward(self, x, offset_order):
+    def forward(self, x, offset_order, src_key_padding_mask):
         #offset_order, shape of (batch_size, max_length)
-        src_key_padding_mask = ((x['attention_mask']==0) * 1).clone().detach().bool().to(self.device)
+        src_key_padding_mask = src_key_padding_mask.clone().detach().bool().to(self.device)
+        #src_key_padding_mask = ((x['attention_mask']==0) * 1).clone().detach().bool().to(self.device)
 
         if self.freeze:
             with torch.no_grad():
@@ -167,7 +170,12 @@ class post_Transformer(nn.Module):
         else:
             x = self.prebert(x)
 
-        x = x.reshape(-1, self.max_length, 128)    # check shape change
+        x = x.reshape(-1, self.max_length, 128)    # x, shape of (batch_size, seq_len, dimension)
+        B = x.size(0)
+        cls = torch.zeros(B, 1).long().to(self.device)
+        cls = self.cls_embed(cls).to(self.device)   # batch_size, seq_len, dimension
+        x = torch.cat((cls, x), dim=1)
+
         x = x.permute(1, 0, 2)    # x, shape of (seq_len, batch_size, dimension)
         x = self.pos_encoder(x, offset_order)
 
