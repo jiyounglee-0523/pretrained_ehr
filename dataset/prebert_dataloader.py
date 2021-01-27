@@ -119,10 +119,12 @@ class healthcare_dataset(Dataset):
             single_target = torch.zeros(18)
             single_target[target_list - 1] = 1     # shape of 18
 
+        padding_mask = torch.cat((torch.zeros(int(seq_len)), torch.ones(int(self.max_length) - int(seq_len))))
+
         if not self.transformer:
             return single_item_name, single_target, seq_len
         if self.transformer:
-            return single_item_name, single_target, single_order_offset
+            return single_item_name, single_target, single_order_offset, padding_mask
 
 
     def preprocess(self, cohort, data_type, item, time_window, target):

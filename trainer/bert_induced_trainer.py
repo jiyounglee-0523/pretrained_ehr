@@ -102,12 +102,12 @@ class Bert_Trainer():
                 self.model.train()
                 self.optimizer.zero_grad(set_to_none=True)
 
-                item_name, item_target, seq_len = sample
+                item_name, item_target, offset_order, masking = sample
                 #item_name = item_name.to(self.device)
                 item_target = item_target.to(self.device)
                 # print('DataLoader Done!')
                 # print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
-                y_pred = self.model(item_name, seq_len)
+                y_pred = self.model(item_name, offset_order, masking)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
