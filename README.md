@@ -204,7 +204,4 @@ v7.4: Bert Tiny finetune
 
 v.7.5: Transformer - Bert tiny, mini, base debuged
 
-[TO-DO] implement BCE and Transformer in test.py
-
-​                implement Transformer in BERT finetuning
-
+v7.6: few-shot transformer implemented
