@@ -20,7 +20,7 @@ def main():
     # parser.add_argument('--embedding_dim', type=int, default=768)
     # parser.add_argument('--hidden_dim', type=int, default=512)
     # parser.add_argument('--rnn_bidirection', action='store_true')
-    parser.add_argument('--n_epochs', type=int, default=5000)
+    parser.add_argument('--n_epochs', type=int, default=1000)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str)

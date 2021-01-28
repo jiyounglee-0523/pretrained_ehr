@@ -28,7 +28,7 @@ class bert_dict_Trainer():
 
         if not self.debug:
             if args.transformer:
-                wandb.init(project='bert_tiny', entity="pretrained_ehr", config=args, reinit=True)
+                wandb.init(project='no_early_stopping', entity="pretrained_ehr", config=args, reinit=True)
             # elif not args.transformer:
             #     wandb.init(project='jylee_lab', entity="pretrained_ehr", config=args, reinit=True)
 
@@ -126,7 +126,7 @@ class bert_dict_Trainer():
             self.model = dict_post_RNN(args, output_size, device, target_file=args.source_file).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-        self.early_stopping = EarlyStopping(patience=30, verbose=True)
+        #self.early_stopping = EarlyStopping(patience=30, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -193,22 +193,21 @@ class bert_dict_Trainer():
             print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
 
-            self.early_stopping(auprc_eval)
+            #self.early_stopping(auprc_eval)
 
-            if self.early_stopping.early_stop:
-                print('Early stopping')
-                if not self.debug:
-                    torch.save({'model_state_dict': self.model.state_dict(),
-                                'optimizer_state_dict': self.optimizer.state_dict(),
-                                'loss': avg_eval_loss,
-                                'auroc': best_auroc,
-                                'auprc': best_auprc,
-                                'epochs': n_epoch}, self.final_path)
-                if self.source_file == 'both':
-                    self.test_both()
-                else:
-                    self.test()
-                break
+            #if self.early_stopping.early_stop:
+                #print('Early stopping')
+        if not self.debug:
+            torch.save({'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': self.optimizer.state_dict(),
+                        'loss': avg_eval_loss,
+                        'auroc': best_auroc,
+                        'auprc': best_auprc,
+                        'epochs': n_epoch}, self.final_path)
+        if self.source_file == 'both':
+            self.test_both()
+        else:
+            self.test()
 
     def evaluation(self):
         self.model.eval()

@@ -205,3 +205,5 @@ v7.4: Bert Tiny finetune
 v.7.5: Transformer - Bert tiny, mini, base debuged
 
 v7.6: few-shot transformer implemented
+
+v7.7: no early-stopping
