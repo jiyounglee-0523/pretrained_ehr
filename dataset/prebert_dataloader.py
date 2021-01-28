@@ -37,7 +37,7 @@ class healthcare_dataset(Dataset):
         item = args.item
         self.max_length = args.max_length
         time_window = args.time_window
-        self.word_max_length = args.word_max_length
+        self.word_max_length = 40 if (args.item=='med' and args.source_file=='eicu') else args.word_max_length
         self.transformer = args.transformer
 
         if source_file == 'both':
@@ -113,6 +113,7 @@ class healthcare_dataset(Dataset):
         # single_item_offset_order = torch.cat([self.item_offset_order[item]] * seq_len, dim=0)
         # single_item_offset = self.item_offset[item]
         # single_item_offset_order = self.item_offset_order[item]
+
         single_target = self.item_target[item]
         if self.target == 'dx_depth1_unique':
             single_target = [int(j) for j in single_target]
