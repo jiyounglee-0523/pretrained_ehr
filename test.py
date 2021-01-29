@@ -223,6 +223,7 @@ class Tester(nn.Module):
         self.device = device
         self.debug = args.debug
         self.BCE = args.only_BCE
+        self.target = args.target
 
         if not self.debug:
             wandb.init(project='test_among_berts', entity='pretrained_ehr', config=args, reinit=True)
@@ -271,9 +272,9 @@ class Tester(nn.Module):
         elif args.bert_induced and args.bert_freeze and not args.cls_freeze and args.transformer:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
-                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
             else:
-                self.model = Transformer(args, output_size, self.device, target_file=args.test_file, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+                self.model = Transformer(args, output_size, self.device, target_file=args.test_file, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
             print('bert freeze, cls_learnable, transformer')
             if args.concat:
                 if args.only_BCE:
@@ -312,10 +313,10 @@ class Tester(nn.Module):
         elif args.bert_induced and args.bert_freeze and args.cls_freeze and args.transformer:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
-                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim)
+                self.model = Transformer(args, output_size, self.device, target_file='both', n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads, hidden_dim=args.transformer_hidden_dim).to(self.device)
             else:
                 self.model = Transformer(args, output_size, self.device, target_file=args.test_file, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
-                                         hidden_dim=args.transformer_hidden_dim)
+                                         hidden_dim=args.transformer_hidden_dim).to(self.device)
             print('bert freeze, cls_freeze, Transformer')
             if args.concat:
                 if args.only_BCE:
@@ -386,10 +387,10 @@ class Tester(nn.Module):
                 print('single Transformer')
                 if args.source_file == 'both':
                     self.model = Transformer(args, output_size, self.device, target_file='both', vocab_size=vocab_size, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
-                                         hidden_dim=args.transformer_hidden_dim)
+                                         hidden_dim=args.transformer_hidden_dim).to(self.device)
                 else:
                     self.model = Transformer(args, output_size, self.device, target_file=args.test_file, vocab_size=vocab_size, n_layer=args.transformer_layers, attn_head=args.transformer_attn_heads,
-                                         hidden_dim=args.transformer_hidden_dim)
+                                         hidden_dim=args.transformer_hidden_dim).to(self.device)
                 if args.concat:
                     if args.only_BCE:
                         filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
@@ -406,9 +407,6 @@ class Tester(nn.Module):
                             args.transformer_hidden_dim, args.seed)
 
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
-
-#######################################################################################################
-################ change target_filename!!! There are so many :(  (cls_freeze/learnable,   BCE/Focal , Transformer/RNN, Concat/Nonconcat)
 
         if not args.transformer:
             if args.concat:
@@ -525,7 +523,10 @@ class Tester(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
 
                 loss.backward()
                 self.optimizer.step()
@@ -592,7 +593,10 @@ class Tester(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_eval_loss += loss.item() / len(self.valid_dataloader)
 
                 probs_eval = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -619,7 +623,10 @@ class Tester(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -654,7 +661,10 @@ class Tester(nn.Module):
                 item_target = item_target.to(self.device)
 
                 y_pred = self.model(item_id, seq_len)
-                loss = self.criterion(y_pred, item_target.float().to(self.device))
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
                 avg_test_loss += loss.item() / len(self.test_dataloader)
 
                 probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
@@ -691,21 +701,23 @@ def main():
     parser.add_argument('--n_epochs', type=int, default=500)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert'], type=str, default='bio_bert')
+    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str, default='bio_bert')
     parser.add_argument('--bert_freeze', action='store_true')
+    parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=int, default=6)
+    parser.add_argument('--device_number', type=str, default='7')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--only_BCE', action='store_true')
     parser.add_argument('--transformer', action='store_true')
-
-
+    parser.add_argument('--transformer_layers', type=int, default=2)
+    parser.add_argument('--transformer_attn_heads', type=int, default=8)
+    parser.add_argument('--transformer_hidden_dim', type=int, default=256)
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     args.rnn_bidirection = False

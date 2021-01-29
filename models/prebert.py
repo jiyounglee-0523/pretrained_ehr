@@ -137,9 +137,10 @@ class post_Transformer(nn.Module):
         self.max_length = args.max_length
         self.device = device
         self.freeze = args.bert_freeze
+        word_max_length = 40 if (args.item == 'med' and args.source_file=='eicu')  else args.word_max_length
 
         if args.bert_model == 'bert_tiny':
-            self.prebert = ClinicalBERT(args.word_max_length)
+            self.prebert = ClinicalBERT(word_max_length)
 
         if args.bert_freeze == True:
             for param in self.prebert.parameters():
