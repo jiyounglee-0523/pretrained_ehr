@@ -207,3 +207,5 @@ v.7.5: Transformer - Bert tiny, mini, base debuged
 v7.6: few-shot transformer implemented
 
 v7.7: no early-stopping
+
+v7.8 early-stopping with 100, seperate both evaluation

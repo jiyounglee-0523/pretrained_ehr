@@ -2,7 +2,7 @@ import subprocess
 import os
 
 # Configuration before run
-device = 1
+device = 7
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
@@ -10,15 +10,15 @@ PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
 source_file_list = ['eicu']
-target_list = ['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique']
+target_list = ['readmission', 'mortality']
 
 for source_file in source_file_list:
     for target in target_list:
         TRAINING_CONFIG = {
             "source_file": source_file,
             "target": target,
-            "item": 'inf',
-            "max_length": 150,
+            "item": 'all',
+            "max_length": 300,
             "bert_model": 'pubmed_bert',
             "bert_freeze": True,
             "device_number": device,
