@@ -326,7 +326,7 @@ class bert_dict_Trainer():
 
                 y_pred = self.model(item_embed, seq_len)
 
-                if self.BCE and self.target != 'dx_depth1_unqiue':
+                if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
                     loss = self.criterion(y_pred, item_target.float().to(self.device))
@@ -356,7 +356,7 @@ class bert_dict_Trainer():
 
                 y_pred = self.model(item_embed, seq_len)
 
-                if self.BCE and self.target != 'dx_depth1_unqiue':
+                if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
                     loss = self.criterion(y_pred, item_target.float().to(self.device))
