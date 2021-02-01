@@ -25,25 +25,28 @@ few-shot: 0.0(zero-shot), 0.1, 0.3, 0.5, 0.7, 0.9, 1.0(full-shot = transfer lear
 """
 
 
-def get_test_dataloader(args, data_type='train'):       # validation? test?
+def get_test_dataloader(args, data_type='train', data_name=None):       # validation? test?
     if data_type == 'train':
         train_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
+        dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'eval':
-        eval_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=0)
+        eval_data = Few_Shot_Dataset(args, data_type=data_type, data_name=data_name)
+        dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'test':
-        test_data = Few_Shot_Dataset(args, data_type=data_type)
-        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=0)
+        test_data = Few_Shot_Dataset(args, data_type=data_type, data_name=data_name)
+        dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
 
     return dataloader
 
 
 class Few_Shot_Dataset(Dataset):
-    def __init__(self, args, data_type):
-        test_file = args.test_file
+    def __init__(self, args, data_type, data_name=None):
+        if data_name is None:
+            test_file = args.test_file
+        else:
+            test_file = data_name
         self.target = args.target
         item = args.item
         self.max_length = args.max_length
@@ -51,6 +54,7 @@ class Few_Shot_Dataset(Dataset):
         self.word_max_length = args.word_max_length
         self.bert_induced = args.bert_induced
         source_file = args.source_file
+        self.transformer = args.transformer
 
         if test_file == 'both':
             if args.concat:
@@ -70,18 +74,22 @@ class Few_Shot_Dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
-            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
+            mimic_item_name, mimic_item_target, mimic_item_offset_order = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target, eicu_item_offset_order = self.preprocess(eicu, data_type, item, time_window, self.target)
 
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
+
+            mimic_item_offset_order = list(mimic_item_offset_order)
+            eicu_item_offset_order = list(eicu_item_offset_order)
+            mimic_item_offset_order.extend(eicu_item_offset_order)
+            self.item_offset_order = pad_sequence(mimic_item_offset_order, batch_first=True)
 
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
                 self.item_target = mimic_item_target
             else:
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
-
 
         else:
             few_shot = args.few_shot
@@ -109,7 +117,7 @@ class Few_Shot_Dataset(Dataset):
             elif test_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
+            self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
         if source_file == 'both':
             if args.concat:
@@ -128,10 +136,11 @@ class Few_Shot_Dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
-        # RNN
+        single_order_offset = self.item_offset_order[item]
+        padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
+        single_order_offset = torch.cat((single_order_offset, padding), dim=0)
 
         single_target = self.item_target[item]
-
         if self.target == 'dx_depth1_unique':
             single_target = [int(j) for j in single_target]
             target_list = torch.Tensor(single_target).long()
@@ -146,15 +155,22 @@ class Few_Shot_Dataset(Dataset):
 
         def embed_dict(x):
             return self.id_dict[x]
-
         embedding = list(map(embed_dict, single_item_name))  # list with length seq_len
         embedding = torch.Tensor(embedding)
+        if self.transformer:
+            embedding = embedding + 1
+            single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)   # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
 
-        return embedding, single_target, seq_len
+        if self.transformer:
+            embedding = torch.cat((torch.Tensor([1]), embedding), dim=0) # 1 for cls
 
+        if not self.transformer:
+            return embedding, single_target, seq_len
+        elif self.transformer:
+            return embedding, single_target, single_order_offset
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
@@ -195,8 +211,8 @@ class Few_Shot_Dataset(Dataset):
         item_id = cohort[id_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         item_id = pad_sequence(item_id, batch_first=True)
 
-        # item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
-        # item_offset_order = pad_sequence(item_offset_order, batch_first=True)
+        item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
+        item_offset_order = pad_sequence(item_offset_order, batch_first=True)
         #
         # item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         # item_offset = pad_sequence(item_offset, batch_first=True)
@@ -208,7 +224,7 @@ class Few_Shot_Dataset(Dataset):
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist()) # shape of (B)
 
-        return item_name, item_target
+        return item_name, item_target, item_offset_order
 
 
 ################################################################################
@@ -473,10 +489,8 @@ class Tester(nn.Module):
 
         target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
 
-
         self.best_target_path = target_path + '_best_auprc.pt'
         self.final_path = target_path + '_final.pt'
-
 
         # load parameters
         best_eval_path = self.source_path + '_best_auprc.pt'
@@ -500,7 +514,7 @@ class Tester(nn.Module):
         print('Model will be saved in {}'.format(self.best_target_path))
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.early_stopping = EarlyStopping(patience=30, verbose=True)
+        self.early_stopping = EarlyStopping(patience=100, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -608,8 +622,8 @@ class Tester(nn.Module):
 
         return avg_eval_loss, auroc_eval, auprc_eval
 
-    def zero_shot_test(self):
 
+    def zero_shot_test(self):
         self.model.eval()
 
         preds_test = []
