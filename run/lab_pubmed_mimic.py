@@ -20,7 +20,7 @@ for model in model_list:
        "item": 'inf',
        "max_length": 150,
        "bert_freeze": True,
-       "target": 'los>3day',
+       "target": 'dx_depth1_unique',
        "bert_model": model,
        "device_number": device,
        "only_BCE": True,
