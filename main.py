@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--n_epochs', type=int, default=1000)
     # parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str)
+    parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny', 'bert_small'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
@@ -44,7 +44,6 @@ def main():
     # args.device_number = 6
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('cpu')
     args.rnn_bidirection = False
 
     # hyperparameter tuning
@@ -94,9 +93,8 @@ def main():
         print('seed_number', args.seed)
 
         train_loader = get_dataloader(args=args, data_type='train')
-        valid_loader = get_dataloader(args=args, data_type='eval')
 
-        trainer = Trainer(args, train_loader, valid_loader, device)
+        trainer = Trainer(args, train_loader, device)
         trainer.train()
 
         print('Finished training seed: {}'.format(seed))
