@@ -10,18 +10,19 @@ device = 4
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
-target_list = ['los>3day', 'los>7day']
+model_list = ['bert_mini', 'bert_small']
 
-for target in target_list:
+for model in model_list:
    TRAINING_CONFIG = {
        "bert_induced": True,
        "source_file": 'both',
+       "target": 'readmission',
        "item": 'lab',
        "max_length": 150,
        "bert_freeze": True,
-       "target": target,
-       "bert_model": 'pubmed_bert',
+       "bert_model": model,
        "device_number": device,
+       "input_path": '',
        #"concat": True,
        "cls_freeze": True
    }

@@ -28,10 +28,11 @@ class bert_dict_Trainer():
         self.BCE = args.only_BCE
         self.target = args.target
         self.source_file = args.source_file
+        self.seg = args.transformer_segment_embed
 
         if not self.debug:
             if args.transformer:
-                wandb.init(project='no_early_stopping', entity="pretrained_ehr", config=args, reinit=True)
+                wandb.init(project=args.wandb_project_name, entity="pretrained_ehr", config=args, reinit=True)
             # elif not args.transformer:
             #     wandb.init(project='jylee_lab', entity="pretrained_ehr", config=args, reinit=True)
 
@@ -94,7 +95,17 @@ class bert_dict_Trainer():
                                                                                                                      args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                 elif not args.concat:
                     if args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                        if args.transformer_segment_embed:
+                            filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_seg_{}_{}_{}_onlyBCE'.format(
+                                args.transformer_layers, args.transformer_attn_heads,
+                                args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
+                        elif not args.transformer_segment_embed:
+                            if args.not_removed_minfreq:
+                                filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_zerofreq_{}_onlyBCE'.format(
+                                    args.transformer_layers, args.transformer_attn_heads,
+                                    args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
+                            elif not args.not_removed_minfreq:
+                                filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
                         filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
@@ -161,11 +172,16 @@ class bert_dict_Trainer():
                 self.model.train()
                 self.optimizer.zero_grad(set_to_none=True)
 
-                item_embed, item_target, seq_len = sample
-                item_embed = item_embed.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_embed, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
 
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
@@ -290,11 +306,17 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.valid_dataloader):
-                item_embed, item_target, seq_len = sample
-                item_embed = item_embed.to(self.device)
-                item_target = item_target.to(self.device)
 
-                y_pred = self.model(item_embed, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
 
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
@@ -320,11 +342,16 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.mimic_valid_dataloader):
-                item_embed, item_target, seq_len = sample
-                item_embed = item_embed.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_embed, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
 
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
@@ -350,11 +377,16 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.eicu_valid_dataloader):
-                item_embed, item_target, seq_len = sample
-                item_embed = item_embed.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_embed, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
 
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
@@ -387,11 +419,16 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.test_dataloader):
-                item_id, item_target, seq_len = sample
-                item_id = item_id.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_id, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
@@ -423,11 +460,16 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.mimic_test_dataloader):
-                item_id, item_target, seq_len = sample
-                item_id = item_id.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_id, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
@@ -459,11 +501,16 @@ class bert_dict_Trainer():
 
         with torch.no_grad():
             for iter, sample in enumerate(self.eicu_test_dataloader):
-                item_id, item_target, seq_len = sample
-                item_id = item_id.to(self.device)
-                item_target = item_target.to(self.device)
-
-                y_pred = self.model(item_id, seq_len)
+                if self.seg:
+                    item_embed, item_target, seq_len, item_index = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len, item_index)
+                elif not self.seg:
+                    item_embed, item_target, seq_len = sample
+                    item_embed = item_embed.to(self.device)
+                    item_target = item_target.to(self.device)
+                    y_pred = self.model(item_embed, seq_len)
                 if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:

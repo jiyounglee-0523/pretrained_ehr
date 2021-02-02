@@ -39,6 +39,9 @@ def main():
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
+    parser.add_argument('--transformer_segment_embed', action='store_true')
+    parser.add_argument('--wandb_project_name', type=str, default='aa')
+    parser.add_argument('--not_removed_minfreq', action='store_true')
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -75,7 +78,6 @@ def main():
 
     # if args.item == 'all':
     #     assert args.max_length == '300', 'when using all items, max length should be 300'
-
 
     mp.set_sharing_strategy('file_system')
 
