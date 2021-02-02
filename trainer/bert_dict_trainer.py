@@ -72,33 +72,33 @@ class bert_dict_Trainer():
             if args.cls_freeze:
                 if args.concat:
                     if args.only_BCE:
-                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
-                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                 elif not args.concat:
                     if args.only_BCE:
-                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
-                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_fixed_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
             elif not args.cls_freeze:
                 if args.concat:
                     if args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                 elif not args.concat:
                     if args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed)
+                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
 
         path = os.path.join(args.path, args.item, 'cls_learnable', args.source_file, file_target_name, filename)
         print('Model will be saved in {}'.format(path))
