@@ -73,8 +73,8 @@ def main():
     # elif args.time_window == '24':
     #     assert args.max_length == '200', "time_window of 24 should have max length of 200!"
 
-    if args.item == 'all':
-        assert args.max_length == '300', 'when using all items, max length should be 300'
+    # if args.item == 'all':
+    #     assert args.max_length == '300', 'when using all items, max length should be 300'
 
 
     mp.set_sharing_strategy('file_system')
