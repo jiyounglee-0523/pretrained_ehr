@@ -2,27 +2,30 @@ import subprocess
 import os
 
 # Configuration before run
-device = 6
+device = 7
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-source_file_list = ['mimic']
-target_list = ['mortality']
+item_list = ['inf', 'all']
+target_list = ['mortality', 'los>3day']
 
-for source_file in source_file_list:
+for item in item_list:
     for target in target_list:
         TRAINING_CONFIG = {
-            "source_file": source_file,
+            "source_file": 'both',
             "target": target,
-            "item": 'med',
-            "max_length": 150,
+            "item": item,
             "bert_model": 'pubmed_bert',
             "bert_freeze": True,
             "device_number": device,
-            "debug":True
+            "input_path": '/home/jylee/from_ghhur/input_data_min_freq_zero/',
+            "only_BCE": True,
+            "transformer": True,
+            "wandb_project_name": 'min_freq_zero',
+            "not_removed_minfreq": True
         }
 
 
@@ -30,4 +33,3 @@ for source_file in source_file_list:
 
         # Run script
         subprocess.run(['python',SRC_PATH]+TRAINING_CONFIG_LIST)
-        print('Finished {} {}'.format(source_file, target))

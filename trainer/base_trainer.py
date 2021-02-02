@@ -31,7 +31,7 @@ class Trainer(nn.Module):
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project='no_early_stopping', entity="pretrained_ehr", config=args, reinit=True)
+            wandb.init(project=args.wandb_project_name, entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -56,14 +56,23 @@ class Trainer(nn.Module):
         elif args.transformer:
             if args.concat:
                 if args.only_BCE:
-                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                    if args.not_removed_minfreq:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_{}_zerofreq_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                            args.transformer_hidden_dim, args.seed, args.max_length)
+
+                    elif not args.not_removed_minfreq:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
                 elif not args.only_BCE:
                     filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
             elif not args.concat:
                 if args.only_BCE:
-                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                    if args.not_removed_minfreq:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_{}_zerofreqonlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed, args.max_length)
+                    elif not args.not_removed_minfreq:
+                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
                 elif not args.only_BCE:
                     filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
@@ -77,33 +86,63 @@ class Trainer(nn.Module):
         self.best_eicu_eval_path = path + '_eval_best_auprc.pt'
         self.final_path = path + '_final.pt'
 
-        if args.source_file == 'mimic':
-            if args.item == 'lab':
-                vocab_size = 5110 if args.concat else 359
-            elif args.item == 'med':
-                vocab_size = 2211 if args.concat else 1535
-            elif args.item == 'inf':
-                vocab_size = 485
-            elif args.item == 'all':
-                vocab_size = 7563 if args.concat else 2377
-        elif args.source_file == 'eicu':
-            if args.item == 'lab':
-                vocab_size = 9659 if args.concat else 134
-            elif args.item == 'med':
-                vocab_size = 2693 if args.concat else 1283
-            elif args.item == 'inf':
-                vocab_size = 495
-            elif args.item == 'all':
-                vocab_size = 8532 if args.concat else 1344
-        elif args.source_file == 'both':
-            if args.item == 'lab':
-                vocab_size = 14371 if args.concat else 448
-            elif args.item == 'med':
-                vocab_size = 4898 if args.concat else 2812
-            elif args.item == 'inf':
-                vocab_size = 979
-            elif args.item == 'all':
-                vocab_size = 15794 if args.concat else 3672
+        if not args.not_removed_minfreq:
+            if args.source_file == 'mimic':
+                if args.item == 'lab':
+                    vocab_size = 5110 if args.concat else 359
+                elif args.item == 'med':
+                    vocab_size = 2211 if args.concat else 1535
+                elif args.item == 'inf':
+                    vocab_size = 485
+                elif args.item == 'all':
+                    vocab_size = 7563 if args.concat else 2377
+            elif args.source_file == 'eicu':
+                if args.item == 'lab':
+                    vocab_size = 9659 if args.concat else 134
+                elif args.item == 'med':
+                    vocab_size = 2693 if args.concat else 1283
+                elif args.item == 'inf':
+                    vocab_size = 495
+                elif args.item == 'all':
+                    vocab_size = 8532 if args.concat else 1344
+            elif args.source_file == 'both':
+                if args.item == 'lab':
+                    vocab_size = 14371 if args.concat else 448
+                elif args.item == 'med':
+                    vocab_size = 4898 if args.concat else 2812
+                elif args.item == 'inf':
+                    vocab_size = 979
+                elif args.item == 'all':
+                    vocab_size = 15794 if args.concat else 3672
+        elif args.not_removed_minfreq:
+            # change this!
+            if args.source_file == 'mimic':
+                if args.item == 'lab':
+                    vocab_size = 5110 if args.concat else 442
+                elif args.item == 'med':
+                    vocab_size = 2211 if args.concat else 3655
+                elif args.item == 'inf':
+                    vocab_size = 783
+                elif args.item == 'all':
+                    vocab_size = 7563 if args.concat else 3586
+            elif args.source_file == 'eicu':
+                if args.item == 'lab':
+                    vocab_size = 9659 if args.concat else 144
+                elif args.item == 'med':
+                    vocab_size = 2693 if args.concat else 1969
+                elif args.item == 'inf':
+                    vocab_size = 727
+                elif args.item == 'all':
+                    vocab_size = 8532 if args.concat else 1947
+            elif args.source_file == 'both':
+                if args.item == 'lab':
+                    vocab_size = 14371 if args.concat else 537
+                elif args.item == 'med':
+                    vocab_size = 4898 if args.concat else 5611
+                elif args.item == 'inf':
+                    vocab_size = 1504
+                elif args.item == 'all':
+                    vocab_size = 15794 if args.concat else 5474
 
         if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()

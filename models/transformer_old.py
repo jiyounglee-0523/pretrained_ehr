@@ -24,24 +24,15 @@ class PositionalEncoding(nn.Module):
         # pe shape of (max_length, dimension)
 
         self.positional_embed = nn.Embedding(int(max_len)+1, embedding_dimension, _weight=pe)     # padding_index=0을 해줘야 하나?
-        if seg:
-            self.segment_embed = nn.Embedding(4, embedding_dimension, padding_idx=0)    # maybe 4?
 
-
-    def forward(self, x, offset_order, segment_order):
+    def forward(self, x, offset_order):
         # x, shape of (max_length, batch_size, dimension)
         # offset_order, shape of (batch_size, max_length)
         offset_order = offset_order.transpose(0, 1).long()    # shape of (max_length, batch_size)
-        if segment_order is not None:
-            segment_order = segment_order.transpose(0, 1).long()
 
         with torch.no_grad():
             positional_embed = self.positional_embed(offset_order)
         x = x + positional_embed
-
-        if segment_order is not None:
-            segment_embed = self.segment_embed(segment_order)
-            x = x + segment_embed
 
         output = self.dropout(x)    # shape of (max_len, batch_size, dimension)  dropout will be after the segment embedding
         return output
@@ -53,7 +44,6 @@ class Transformer(nn.Module):
         dropout = args.dropout
         self.bert_induced = args.bert_induced
         self.device = device
-        self.pos = args.transformer_segment_embed
 
         # bert_induced Transformer
         if args.bert_induced:
@@ -75,11 +65,10 @@ class Transformer(nn.Module):
 
         # singleTransformer
         elif not args.bert_induced:
-            self.embed = nn.Embedding(vocab_size + 1, args.embedding_dim, padding_idx=0)
+            self.embed = nn.Embedding(vocab_size+1, args.embedding_dim, padding_idx=0)
             embedding_dimension = args.embedding_dim
 
-        self.pos_encoder = PositionalEncoding(embedding_dimension, dropout, args.max_length, args.transformer_segment_embed).to(device)
-
+        self.pos_encoder = PositionalEncoding(embedding_dimension, dropout, args.max_length).to(device)
         encoder_layers = nn.TransformerEncoderLayer(embedding_dimension, attn_head, hidden_dim, dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=n_layer)
 
@@ -87,13 +76,11 @@ class Transformer(nn.Module):
 
 
 
-    def forward(self, x, offset_order, segment_order=None):
+    def forward(self, x, offset_order):
         # offset_order, shape of (batch_size, max_length)
         src_key_padding_mask = ((x==0) * 1).clone().detach().bool().to(self.device)
         x = x.long().to(self.device)
         offset_order = offset_order.to(x.device)
-        if segment_order is not None:
-            segment_order = segment_order.to(x.device)
 
         if self.bert_induced:
             if self.cls_freeze:
@@ -108,7 +95,7 @@ class Transformer(nn.Module):
 
 
         x = x.permute(1, 0, 2)  # x, shape of (seq_len, batch_size, dimension)
-        x = self.pos_encoder(x, offset_order, segment_order)
+        x = self.pos_encoder(x, offset_order)
 
         output = self.transformer_encoder(src=x,
                                           src_key_padding_mask=src_key_padding_mask)  # output shape of (max_len, batch_size, embedding)

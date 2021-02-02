@@ -27,7 +27,7 @@ class Bert_Trainer():
         self.source_file = args.source_file
 
         if not self.debug:
-            wandb.init(project="no_early_stopping", entity="pretrained_ehr", config=args, reinit=True)
+            wandb.init(project= args.wandb_project_name, entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -45,7 +45,10 @@ class Bert_Trainer():
                 filename = 'bert_finetune_bertfreeze_{}_rnn_{}'.format(args.bert_model, args.seed)
         elif args.transformer:
             if args.only_BCE:
-                filename = 'bert_finetune_{}_transformer_{}_onlyBCE'.format(args.bert_model, args.seed)
+                if args.transformer_segment_embed:
+                    filename = 'bert_finetune_{}_transformer_{}_seg_onlyBCE'.format(args.bert_model, args.seed)
+                elif not args.transformer_segment_embed:
+                    filename = 'bert_finetune_{}_transformer_{}_onlyBCE'.format(args.bert_model, args.seed)
             elif not args.only_BCE:
                 filename = 'bert_finetune_{}_transformer_{}'.format(args.bert_model, args.seed)
 

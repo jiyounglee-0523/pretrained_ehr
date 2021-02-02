@@ -24,6 +24,7 @@ class dict_post_RNN(nn.Module):
 
         self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
 
+        # check if we need compress_fc here!! Different setting
         self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
         if args.rnn_model_type == 'gru':

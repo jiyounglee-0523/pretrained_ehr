@@ -211,3 +211,5 @@ v7.7: no early-stopping
 v7.8 early-stopping with 100, seperate both evaluation
 
 v7.9 : few-shot, data dependent experiment with transformer, seperate both evaluation
+
+v8.0: segment embedding, no min freq
