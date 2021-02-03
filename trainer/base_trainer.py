@@ -210,7 +210,6 @@ class Trainer(nn.Module):
                     elif self.lr_scheduler == 'plateau':
                         self.scheduler.step(auprc_eval)
                     lr = self.optimizer.param_groups[0]['lr']
-                    print(lr)
 
                 if best_auprc < auprc_eval:
                     best_loss = avg_eval_loss
