@@ -29,6 +29,7 @@ class Trainer(nn.Module):
         self.BCE = args.only_BCE
         self.target = args.target
         self.source_file = args.source_file
+        self.lr_scheduler = args.lr_scheduler
 
         if not self.debug:
             wandb.init(project=args.wandb_project_name, entity="pretrained_ehr", config=args, reinit=True)
@@ -56,24 +57,15 @@ class Trainer(nn.Module):
         elif args.transformer:
             if args.concat:
                 if args.only_BCE:
-                    if args.not_removed_minfreq:
-                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_{}_zerofreq_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                            args.transformer_hidden_dim, args.seed, args.max_length)
-
-                    elif not args.not_removed_minfreq:
-                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
                 elif not args.only_BCE:
                     filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_concat'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
             elif not args.concat:
                 if args.only_BCE:
-                    if args.not_removed_minfreq:
-                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_{}_zerofreqonlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.seed, args.max_length)
-                    elif not args.not_removed_minfreq:
-                        filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.seed)
+                    filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.seed, args.lr_scheduler, args.lr)
                 elif not args.only_BCE:
                     filename = 'trained_transformer_layers{}_attnheads{}_hidden{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.seed)
@@ -86,63 +78,33 @@ class Trainer(nn.Module):
         self.best_eicu_eval_path = path + '_eval_best_auprc.pt'
         self.final_path = path + '_final.pt'
 
-        if not args.not_removed_minfreq:
-            if args.source_file == 'mimic':
-                if args.item == 'lab':
-                    vocab_size = 5110 if args.concat else 359
-                elif args.item == 'med':
-                    vocab_size = 2211 if args.concat else 1535
-                elif args.item == 'inf':
-                    vocab_size = 485
-                elif args.item == 'all':
-                    vocab_size = 7563 if args.concat else 2377
-            elif args.source_file == 'eicu':
-                if args.item == 'lab':
-                    vocab_size = 9659 if args.concat else 134
-                elif args.item == 'med':
-                    vocab_size = 2693 if args.concat else 1283
-                elif args.item == 'inf':
-                    vocab_size = 495
-                elif args.item == 'all':
-                    vocab_size = 8532 if args.concat else 1344
-            elif args.source_file == 'both':
-                if args.item == 'lab':
-                    vocab_size = 14371 if args.concat else 448
-                elif args.item == 'med':
-                    vocab_size = 4898 if args.concat else 2812
-                elif args.item == 'inf':
-                    vocab_size = 979
-                elif args.item == 'all':
-                    vocab_size = 15794 if args.concat else 3672
-        elif args.not_removed_minfreq:
-            # change this!
-            if args.source_file == 'mimic':
-                if args.item == 'lab':
-                    vocab_size = 5110 if args.concat else 442
-                elif args.item == 'med':
-                    vocab_size = 2211 if args.concat else 3655
-                elif args.item == 'inf':
-                    vocab_size = 783
-                elif args.item == 'all':
-                    vocab_size = 7563 if args.concat else 3586
-            elif args.source_file == 'eicu':
-                if args.item == 'lab':
-                    vocab_size = 9659 if args.concat else 144
-                elif args.item == 'med':
-                    vocab_size = 2693 if args.concat else 1969
-                elif args.item == 'inf':
-                    vocab_size = 727
-                elif args.item == 'all':
-                    vocab_size = 8532 if args.concat else 1947
-            elif args.source_file == 'both':
-                if args.item == 'lab':
-                    vocab_size = 14371 if args.concat else 537
-                elif args.item == 'med':
-                    vocab_size = 4898 if args.concat else 5611
-                elif args.item == 'inf':
-                    vocab_size = 1504
-                elif args.item == 'all':
-                    vocab_size = 15794 if args.concat else 5474
+        if args.source_file == 'mimic':
+            if args.item == 'lab':
+                vocab_size = 5110 if args.concat else 359
+            elif args.item == 'med':
+                vocab_size = 2211 if args.concat else 1535
+            elif args.item == 'inf':
+                vocab_size = 485
+            elif args.item == 'all':
+                vocab_size = 7563 if args.concat else 2377
+        elif args.source_file == 'eicu':
+            if args.item == 'lab':
+                vocab_size = 9659 if args.concat else 134
+            elif args.item == 'med':
+                vocab_size = 2693 if args.concat else 1283
+            elif args.item == 'inf':
+                vocab_size = 495
+            elif args.item == 'all':
+                vocab_size = 8532 if args.concat else 1344
+        elif args.source_file == 'both':
+            if args.item == 'lab':
+                vocab_size = 14371 if args.concat else 448
+            elif args.item == 'med':
+                vocab_size = 4898 if args.concat else 2812
+            elif args.item == 'inf':
+                vocab_size = 979
+            elif args.item == 'all':
+                vocab_size = 15794 if args.concat else 3672
 
         if args.only_BCE:
             self.criterion = nn.BCEWithLogitsLoss()
@@ -165,7 +127,19 @@ class Trainer(nn.Module):
         if not args.transformer:
             print('RNN')
             self.model = RNNmodels(args=args, vocab_size=vocab_size, output_size=output_size, device=device).to(self.device)
+
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        if args.lr_scheduler is not None:
+            if args.lr_scheduler == 'lambda30':
+                lambda1 = lambda epoch: 0.95 ** (epoch/30)
+                self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=[lambda1])
+
+            elif args.lr_scheduler == 'lambda20':
+                lambda1 = lambda epoch: 0.90 ** (epoch / 20)
+                self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=[lambda1])
+
+            elif args.lr_scheduler == 'plateau':
+                self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', min_lr=1e-6)
 
         if args.source_file != 'both':
             self.early_stopping = EarlyStopping(patience=100, verbose=True)
@@ -230,6 +204,14 @@ class Trainer(nn.Module):
             if self.source_file != 'both':
                 avg_eval_loss, auroc_eval, auprc_eval = self.evaluation()
 
+                if self.lr_scheduler is not None:
+                    if self.lr_scheduler != 'plateau':
+                        self.scheduler.step()
+                    elif self.lr_scheduler == 'plateau':
+                        self.scheduler.step(auprc_eval)
+                    lr = self.optimizer.param_groups[0]['lr']
+                    print(lr)
+
                 if best_auprc < auprc_eval:
                     best_loss = avg_eval_loss
                     best_auroc = auroc_eval
@@ -251,7 +233,8 @@ class Trainer(nn.Module):
                                'train_auprc': auprc_train,
                                'eval_loss': avg_eval_loss,
                                'eval_auroc': auroc_eval,
-                               'eval_auprc': auprc_eval})
+                               'eval_auprc': auprc_eval,
+                               'lr': lr})
 
                 print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
                 print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
@@ -320,6 +303,10 @@ class Trainer(nn.Module):
                                     'epochs': n_epoch}, self.final_path)
                     self.test_both()
                     break
+        if self.source_file != 'both':
+            self.test()
+        elif self.source_file == 'both':
+            self.test_both()
 
     def evaluation(self):
         self.model.eval()
