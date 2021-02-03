@@ -105,7 +105,7 @@ class bert_dict_Trainer():
                                     args.transformer_layers, args.transformer_attn_heads,
                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                             elif not args.not_removed_minfreq:
-                                filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_testfixed_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                     elif not args.only_BCE:
                         filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,

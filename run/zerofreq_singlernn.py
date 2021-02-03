@@ -2,15 +2,15 @@ import subprocess
 import os
 
 # Configuration before run
-device = 7
+device = 3
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-item_list = ['inf', 'all']
-target_list = ['mortality', 'los>3day']
+item_list = ['med']
+target_list = ['mortality']
 
 for item in item_list:
     for target in target_list:
