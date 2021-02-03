@@ -21,27 +21,25 @@ def main():
     # parser.add_argument('--hidden_dim', type=int, default=512)
     # parser.add_argument('--rnn_bidirection', action='store_true')
     parser.add_argument('--n_epochs', type=int, default=1000)
-    # parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--lr', type=float)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny', 'bert_small'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
-    parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
+    # parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=str)
     parser.add_argument('--notes', type=str)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true')
-    parser.add_argument('--separate_overlapping_codes', action='store_true')
     parser.add_argument('--only_BCE', action='store_true')
     parser.add_argument('--transformer', action='store_true')
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
-    parser.add_argument('--transformer_segment_embed', action='store_true')
     parser.add_argument('--wandb_project_name', type=str, default='aa')
-    parser.add_argument('--not_removed_minfreq', action='store_true')
+    parser.add_argument('--lr_scheduler', choices=['lambda30', 'lambda20', 'plateau'])
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -53,8 +51,6 @@ def main():
     args.dropout = 0.3
     args.embedding_dim = 128
     args.hidden_dim = 256
-    args.lr = 1e-4
-
 
     if args.bert_induced and args.bert_freeze:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader

@@ -37,10 +37,7 @@ class bert_dict_dataset(Dataset):
         item = args.item
         self.max_length = args.max_length
         time_window = args.time_window
-        self.word_max_length = args.word_max_length
-        self.separate_overlapping_codes = args.separate_overlapping_codes
         self.transformer = args.transformer
-        self.seg = args.transformer_segment_embed
 
         if source_file == 'both':
             if args.concat:
@@ -62,21 +59,8 @@ class bert_dict_dataset(Dataset):
             mimic = mimic.rename({'HADM_ID': 'ID'}, axis='columns')
             eicu = eicu.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            if self.seg:
-                mimic_item_name, mimic_item_target, mimic_item_offset_order, mimic_item_index = self.preprocess(mimic, data_type, item, time_window, self.target)
-                eicu_item_name, eicu_item_target, eicu_item_offset_order, eicu_item_index = self.preprocess(eicu, data_type, item, time_window, self.target)
-
-            elif not self.seg:
-                mimic_item_name, mimic_item_target, mimic_item_offset_order = self.preprocess(mimic,
-                                                                                                                data_type,
-                                                                                                                item,
-                                                                                                                time_window,
-                                                                                                                self.target)
-                eicu_item_name, eicu_item_target, eicu_item_offset_order = self.preprocess(eicu,
-                                                                                                            data_type,
-                                                                                                            item,
-                                                                                                            time_window,
-                                                                                                            self.target)
+            mimic_item_name, mimic_item_target, mimic_item_offset_order = self.preprocess(mimic, data_type, item, time_window, self.target)
+            eicu_item_name, eicu_item_target, eicu_item_offset_order = self.preprocess(eicu, data_type, item, time_window, self.target)
             mimic_item_name.extend(eicu_item_name)
             self.item_name = mimic_item_name
 
@@ -84,12 +68,6 @@ class bert_dict_dataset(Dataset):
             eicu_item_offset_order = list(eicu_item_offset_order)
             mimic_item_offset_order.extend(eicu_item_offset_order)
             self.item_offset_order = pad_sequence(mimic_item_offset_order, batch_first=True)
-
-            if self.seg:
-                mimic_item_index = list(mimic_item_index)
-                eicu_item_index = list(eicu_item_index)
-                mimic_item_index.extend(eicu_item_index)
-                self.item_index = pad_sequence(mimic_item_index, batch_first=True)
 
             if self.target == 'dx_depth1_unique':
                 mimic_item_target.extend(eicu_item_target)
@@ -111,14 +89,7 @@ class bert_dict_dataset(Dataset):
             elif source_file == 'eicu':
                 data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
 
-            if self.seg:
-                self.item_name, self.item_target, self.item_offset_order, self.item_index = self.preprocess(data, data_type, item, time_window, self.target)
-            elif not self.seg:
-                self.item_name, self.item_target, self.item_offset_order = self.preprocess(data,
-                                                                                                            data_type,
-                                                                                                            item,
-                                                                                                            time_window,
-                                                                                                            self.target)
+            self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
         # check data path
         if args.concat:
@@ -137,11 +108,6 @@ class bert_dict_dataset(Dataset):
         padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
         single_order_offset = torch.cat((single_order_offset, padding), dim=0)
 
-        if self.seg:
-            single_item_index = self.item_index[item]
-            padding = torch.zeros(int(self.max_length) - single_item_index.size(0))
-            single_item_index = torch.cat((single_item_index, padding), dim=0)
-
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
@@ -153,8 +119,6 @@ class bert_dict_dataset(Dataset):
         if self.transformer:
             embedding = embedding + 1
             single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)    # additional zero positional embedding for cls
-            if self.seg:
-                single_item_index = torch.cat((torch.Tensor([0]), single_item_index), dim=0)
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
@@ -174,10 +138,7 @@ class bert_dict_dataset(Dataset):
         if not self.transformer:
             return embedding, single_target, seq_len
         elif self.transformer:
-            if self.seg:
-                return embedding, single_target, single_order_offset, single_item_index
-            elif not self.seg:
-                return embedding, single_target, single_order_offset
+            return embedding, single_target, single_order_offset
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':
@@ -196,11 +157,7 @@ class bert_dict_dataset(Dataset):
             if target == 'dx_depth1_unique':
                 target_fold = 'dx_fold'
 
-        if self.seg:
-        # extract cohort
-            cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold, 'item_index']]
-        elif not self.seg:
-            cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold]]
+        cohort = cohort[['ID', name_window, offset_window, offset_order_window, target, target_fold]]
 
         if data_type == 'train':
             cohort = cohort[cohort[target_fold] == 1]
@@ -219,16 +176,9 @@ class bert_dict_dataset(Dataset):
         item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         item_offset_order = pad_sequence(item_offset_order, batch_first=True)
 
-        if self.seg:
-            item_index = cohort['item_index'].apply(lambda x: torch.Tensor(x)).values.tolist()
-            item_index = pad_sequence(item_index, batch_first=True)
-
         if target == 'dx_depth1_unique':
             item_target = cohort[target].values.tolist()
         else:
             item_target = torch.LongTensor(cohort[target].values.tolist())  # shape of B
 
-        if self.seg:
-            return item_name, item_target, item_offset_order, item_index
-        elif not self.seg:
-            return item_name, item_target, item_offset_order
+        return item_name, item_target, item_offset_order

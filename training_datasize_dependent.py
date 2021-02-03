@@ -540,6 +540,7 @@ def main():
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
+    parser.add_argument('--transformer_segment_embed', action='store_true')
     args = parser.parse_args()
 
     args.time_window = '12'
