@@ -64,7 +64,7 @@ class bert_dict_Trainer():
                         filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
                 elif not args.concat:
                     if args.only_BCE:
-                        filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                        filename = 'cls_learnable_{}_{}_{}_{}_onlyBCE'.format(args.bert_model, args.seed, args.lr_scheduler, args.lr)
                     elif not args.only_BCE:
                         filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
         elif args.transformer:
@@ -146,10 +146,10 @@ class bert_dict_Trainer():
                 self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', min_lr=1e-6)
 
         if args.source_file != 'both':
-            self.early_stopping = EarlyStopping(patience=100, verbose=True)
+            self.early_stopping = EarlyStopping(patience=50, verbose=True)
         elif args.source_file == 'both':
-            self.mimic_early_stopping = EarlyStopping(patience=100, verbose=True)
-            self.eicu_early_stopping = EarlyStopping(patience=100, verbose=True)
+            self.mimic_early_stopping = EarlyStopping(patience=50, verbose=True)
+            self.eicu_early_stopping = EarlyStopping(patience=50, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -207,12 +207,15 @@ class bert_dict_Trainer():
                     lr = self.optimizer.param_groups[0]['lr']
 
                 if best_auprc < auprc_eval:
-                    self.best_model = self.model
-                    self.best_optimizer = self.optimizer
-                    self.best_epoch = n_epoch
                     best_loss = avg_eval_loss
                     best_auroc = auroc_eval
                     best_auprc = auprc_eval
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_loss,
+                                'auroc': best_auroc,
+                                'auprc': best_auprc,
+                                'epochs': n_epoch}, self.best_eval_path)
                     print('Model parameter saved at epoch {}'.format(n_epoch))
 
                 if not self.debug:
@@ -241,13 +244,6 @@ class bert_dict_Trainer():
                                     'auprc': best_auprc,
                                     'epochs': n_epoch}, self.final_path)
 
-                        torch.save({'model_state_dict': self.best_model.state_dict(),
-                                    'optimizer_state_dict': self.best_optimizer.state_dict(),
-                                    'loss': best_loss,
-                                    'auroc': best_auroc,
-                                    'auprc': best_auprc,
-                                    'epochs': self.best_epoch}, self.best_eval_path)
-                    self.test()
                     break
 
 
@@ -256,13 +252,15 @@ class bert_dict_Trainer():
                 mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval, eicu_avg_eval_loss, eicu_auroc_eval, eicu_auprc_eval = self.evaluation_both()
 
                 if best_mimic_auprc < mimic_auprc_eval:
-                    self.mimic_best_model = self.model
-                    self.mimic_best_optimizer = self.optimizer
-                    self.mimic_best_epoch = n_epoch
                     best_mimic_loss = mimic_avg_eval_loss
                     best_mimic_auroc = mimic_auroc_eval
                     best_mimic_auprc = mimic_auprc_eval
-
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_mimic_loss,
+                                'auroc': best_mimic_auroc,
+                                'auprc': best_mimic_auprc,
+                                'epochs': n_epoch}, self.best_mimic_eval_path)
                     print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
 
                 if not self.debug:
@@ -272,12 +270,15 @@ class bert_dict_Trainer():
 
 
                 if best_eicu_auprc < eicu_auprc_eval:
-                    self.eicu_best_model = self.model
-                    self.eicu_best_optimizer = self.optimizer
-                    self.eicu_best_epoch = n_epoch
                     best_eicu_loss = eicu_avg_eval_loss
                     best_eicu_auroc = eicu_auroc_eval
                     best_eicu_auprc = eicu_auprc_eval
+                    torch.save({'model_state_dict': self.model.state_dict(),
+                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'loss': best_eicu_loss,
+                                'auroc': best_eicu_auroc,
+                                'auprc': best_eicu_auprc,
+                                'epochs': n_epoch}, self.best_eicu_eval_path)
 
                     print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
 
@@ -296,21 +297,6 @@ class bert_dict_Trainer():
                                     'optimizer_state_dict': self.optimizer.state_dict(),
                                     'epochs': n_epoch}, self.final_path)
 
-                        torch.save({'model_state_dict': self.mimic_best_model.state_dict(),
-                                    'optimizer_state_dict': self.mimic_best_optimizer.state_dict(),
-                                    'loss': best_mimic_loss,
-                                    'auroc': best_mimic_auroc,
-                                    'auprc': best_mimic_auprc,
-                                    'epochs': self.mimic_best_epoch}, self.best_mimic_eval_path)
-
-                        torch.save({'model_state_dict': self.eicu_best_model.state_dict(),
-                                    'optimizer_state_dict': self.eicu_best_optimizer.state_dict(),
-                                    'loss': best_eicu_loss,
-                                    'auroc': best_eicu_auroc,
-                                    'auprc': best_eicu_auprc,
-                                    'epochs': self.eicu_best_epoch}, self.best_eicu_eval_path)
-
-                    self.test_both()
                     break
 
         if self.source_file != 'both':

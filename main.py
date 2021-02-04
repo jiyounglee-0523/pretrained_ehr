@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output2/')
     # parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=str)
     parser.add_argument('--notes', type=str)
