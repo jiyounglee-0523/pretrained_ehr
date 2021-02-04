@@ -215,3 +215,5 @@ v7.9 : few-shot, data dependent experiment with transformer, seperate both evalu
 v8.0: segment embedding, no min freq
 
 v8.1: removed segment and min freq, implemented lr scheduler
+
+v8.2: retain best model and save at last

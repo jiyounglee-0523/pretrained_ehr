@@ -34,6 +34,7 @@ class bert_dict_Trainer():
             wandb.init(project=args.wandb_project_name, entity="pretrained_ehr", config=args, reinit=True)
 
         lr = args.lr
+        self.lr = lr
         self.n_epochs = args.n_epochs
 
         file_target_name = args.target
@@ -92,8 +93,8 @@ class bert_dict_Trainer():
                                                                                                                      args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
                 elif not args.concat:
                     if args.only_BCE:
-                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
-                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length, args.lr_scheduler, args.lr)
+                        filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}_{}_{}_{}_onlyBCE'.format(args.transformer_layers, args.transformer_attn_heads,
+                                                                                                                     args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length, args.lr_scheduler, args.lr, args.batch_size)
                     elif not args.only_BCE:
                         filename = 'cls_learnable_transformer_layers{}_attnheads{}_hidden{}_{}_{}_{}'.format(args.transformer_layers, args.transformer_attn_heads,
                                                                                                                      args.transformer_hidden_dim, args.bert_model, args.seed, args.max_length)
@@ -162,6 +163,7 @@ class bert_dict_Trainer():
         best_auprc = 0.0
         best_mimic_auprc = 0.0
         best_eicu_auprc = 0.0
+        lr = self.lr
 
         for n_epoch in range(self.n_epochs + 1):
             preds_train = []
@@ -205,17 +207,13 @@ class bert_dict_Trainer():
                     lr = self.optimizer.param_groups[0]['lr']
 
                 if best_auprc < auprc_eval:
+                    self.best_model = self.model
+                    self.best_optimizer = self.optimizer
+                    self.best_epoch = n_epoch
                     best_loss = avg_eval_loss
                     best_auroc = auroc_eval
                     best_auprc = auprc_eval
-                    if not self.debug:
-                        torch.save({'model_state_dict': self.model.state_dict(),
-                                    'optimizer_state_dict': self.optimizer.state_dict(),
-                                    'loss': best_loss,
-                                    'auroc': best_auroc,
-                                    'auprc': best_auprc,
-                                    'epochs': n_epoch}, self.best_eval_path)
-                        print('Model parameter saved at epoch {}'.format(n_epoch))
+                    print('Model parameter saved at epoch {}'.format(n_epoch))
 
                 if not self.debug:
                     wandb.log({'train_loss': avg_train_loss,
@@ -242,6 +240,13 @@ class bert_dict_Trainer():
                                     'auroc': best_auroc,
                                     'auprc': best_auprc,
                                     'epochs': n_epoch}, self.final_path)
+
+                        torch.save({'model_state_dict': self.best_model.state_dict(),
+                                    'optimizer_state_dict': self.best_optimizer.state_dict(),
+                                    'loss': best_loss,
+                                    'auroc': best_auroc,
+                                    'auprc': best_auprc,
+                                    'epochs': self.best_epoch}, self.best_eval_path)
                     self.test()
                     break
 
@@ -251,17 +256,14 @@ class bert_dict_Trainer():
                 mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval, eicu_avg_eval_loss, eicu_auroc_eval, eicu_auprc_eval = self.evaluation_both()
 
                 if best_mimic_auprc < mimic_auprc_eval:
+                    self.mimic_best_model = self.model
+                    self.mimic_best_optimizer = self.optimizer
+                    self.mimic_best_epoch = n_epoch
                     best_mimic_loss = mimic_avg_eval_loss
                     best_mimic_auroc = mimic_auroc_eval
                     best_mimic_auprc = mimic_auprc_eval
-                    if not self.debug:
-                        torch.save({'model_state_dict': self.model.state_dict(),
-                                    'optimizer_state_dict': self.optimizer.state_dict(),
-                                    'loss': best_mimic_loss,
-                                    'auroc': best_mimic_auroc,
-                                    'auprc': best_mimic_auprc,
-                                    'epochs': n_epoch}, self.best_mimic_eval_path)
-                        print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
+
+                    print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
 
                 if not self.debug:
                     wandb.log({'train_loss': avg_train_loss,
@@ -270,17 +272,14 @@ class bert_dict_Trainer():
 
 
                 if best_eicu_auprc < eicu_auprc_eval:
+                    self.eicu_best_model = self.model
+                    self.eicu_best_optimizer = self.optimizer
+                    self.eicu_best_epoch = n_epoch
                     best_eicu_loss = eicu_avg_eval_loss
                     best_eicu_auroc = eicu_auroc_eval
                     best_eicu_auprc = eicu_auprc_eval
-                    if not self.debug:
-                        torch.save({'model_state_dict': self.model.state_dict(),
-                                    'optimizer_state_dict': self.optimizer.state_dict(),
-                                    'loss': best_eicu_loss,
-                                    'auroc': best_eicu_auroc,
-                                    'auprc': best_eicu_auprc,
-                                    'epochs': n_epoch}, self.best_eicu_eval_path)
-                        print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
+
+                    print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
 
                 print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
                 print('[mimic/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval))
@@ -296,6 +295,20 @@ class bert_dict_Trainer():
                         torch.save({'model_state_dict': self.model.state_dict(),
                                     'optimizer_state_dict': self.optimizer.state_dict(),
                                     'epochs': n_epoch}, self.final_path)
+
+                        torch.save({'model_state_dict': self.mimic_best_model.state_dict(),
+                                    'optimizer_state_dict': self.mimic_best_optimizer.state_dict(),
+                                    'loss': best_mimic_loss,
+                                    'auroc': best_mimic_auroc,
+                                    'auprc': best_mimic_auprc,
+                                    'epochs': self.mimic_best_epoch}, self.best_mimic_eval_path)
+
+                        torch.save({'model_state_dict': self.eicu_best_model.state_dict(),
+                                    'optimizer_state_dict': self.eicu_best_optimizer.state_dict(),
+                                    'loss': best_eicu_loss,
+                                    'auroc': best_eicu_auroc,
+                                    'auprc': best_eicu_auprc,
+                                    'epochs': self.eicu_best_epoch}, self.best_eicu_eval_path)
 
                     self.test_both()
                     break
