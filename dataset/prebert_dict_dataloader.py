@@ -13,7 +13,7 @@ from dataset.prebert_dataloader import healthcare_dataset
 
 def bertinduced_dict_get_dataloader(args, data_type='train', data_name=None):
     if data_type == 'train':
-        train_data = bert_dict_dataset(args, data_type)
+        train_data = bert_dict_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'eval':
