@@ -6,26 +6,28 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+device = 7
+os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
-target_list = ['los>3day', 'mortality', 'los>3day']
-source_file_list = ['mimic', 'eicu', 'eicu']
+target_list = ['los>3day']
+source_file_list = ['eicu']
 
 for i in range(len(target_list)):
    TRAINING_CONFIG = {
-       "bert_induced": True,
        "source_file": source_file_list[i],
        "target": target_list[i],
+       "item": 'all',
        "batch_size": 512,
+       'lr': 1e-4,
        "bert_model": 'bio_clinical_bert',
-       "device_number": '0,1,2,3,4,5,6,7',
-       "concat": True,
-       "bert_freeze": True
+       "device_number": str(device),
+       "bert_freeze": True,
+       "only_BCE": True,
+       "wandb_project_name": 'all_RNN_lr',
    }
 
    TRAINING_CONFIG_LIST = ["--{}".format(k) if (isinstance(v, bool) and (v)) else "--{}={}".format(k,v) for (k,v) in list(TRAINING_CONFIG.items())]
 
    # Run script
    subprocess.run(['python',SRC_PATH]+TRAINING_CONFIG_LIST)
-   print('Finished {}'.format(target_list[i]))
