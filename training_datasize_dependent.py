@@ -263,6 +263,7 @@ class DataSize_Trainer():
 
                     self.test()
                     break
+
             elif self.source_file == 'both':
                 mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval, eicu_avg_eval_loss, eicu_auroc_eval, eicu_auprc_eval = self.evaluation_both()
 
@@ -297,23 +298,21 @@ class DataSize_Trainer():
                                     'epochs': n_epoch}, self.best_eicu_eval_path)
                         print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
 
-                    print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
-                    print('[mimic/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval))
-                    print('[eicu/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(eicu_avg_eval_loss, eicu_auroc_eval, eicu_auprc_eval))
+                print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
+                print('[mimic/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval))
+                print('[eicu/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(eicu_avg_eval_loss, eicu_auroc_eval, eicu_auprc_eval))
 
-                    self.mimic_early_stopping(mimic_auprc_eval)
-                    self.eicu_early_stopping(eicu_auprc_eval)
+                self.mimic_early_stopping(mimic_auprc_eval)
+                self.eicu_early_stopping(eicu_auprc_eval)
 
-                    if self.mimic_early_stopping.early_stop and self.eicu_early_stopping.early_stop:
-                        print('Early stopping')
+                if self.mimic_early_stopping.early_stop and self.eicu_early_stopping.early_stop:
+                    print('Early stopping')
 
-                        if not self.debug:
-                            torch.save({'model_state_dict': self.model.state_dict(),
-                                        'optimizer_state_dict': self.optimizer.state_dict(),
-                                        'epochs': n_epoch}, self.final_path)
-
-                        self.test_both()
-                        break
+                    if not self.debug:
+                        torch.save({'model_state_dict': self.model.state_dict(),
+                                    'optimizer_state_dict': self.optimizer.state_dict(),
+                                    'epochs': n_epoch}, self.final_path)
+                    break
 
         if self.source_file != 'both':
             self.test()

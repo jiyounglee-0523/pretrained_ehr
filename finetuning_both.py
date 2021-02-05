@@ -55,10 +55,10 @@ class FinetuningBoth():
             assert not args.cls_freeze and not args.concat and args.only_BCE, 'no cls_freeze, no concat, only BCE'
             if args.bert_induced:
                 filename = 'cls_learnable_finetune_both_rnn_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed)  # adjust this
-                pretrained_filename = 'cls_learnable_pretrained_both_rnn_{}_{}_{}'.format(target_file, args.bert_model, args.seed)
+                pretrained_filename = 'cls_learnable_pretrained_both_rnn_{}_{}_{}'.format(args.bert_model, args.seed, args.pretrain_epochs)
             else:
                 filename = 'single_finetune_both_rnn_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed)
-                pretrained_filename = 'single_pretrained_both_rnn_{}_{}_{}'.format(target_file, args.bert_model, args.seed)
+                pretrained_filename = 'single_pretrained_both_rnn_{}_{}_{}'.format(args.bert_model, args.seed, args.pretrain_epochs)
         elif args.transformer:
             raise NotImplementedError
 
@@ -133,9 +133,6 @@ class FinetuningBoth():
         self.early_stopping = EarlyStopping(patience=50, verbose=True)
 
     def train(self):
-        # first pretrain on both
-        self.pretrain()
-
         ckpt = torch.load(self.best_pretrain_path)
         self.model.load_state_dict(ckpt['model_state_dict'])
 
@@ -343,6 +340,7 @@ def main():
     parser.add_argument('--target_file', choices=['mimic', 'eicu'], type=str)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'])
     parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='all')
+    parser.add_argument('--task', choices=['pretrain', 'finetune'], type=str)
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=512)
@@ -387,8 +385,15 @@ def main():
 
         args.seed = seed
 
-        trainer = FinetuningBoth(args, device)
-        trainer.train()
+        if args.task == 'finetune':
+            print('Finetuning on {}'.format(args.target_file))
+            trainer = FinetuningBoth(args, device)
+            trainer.train()
+
+        elif args.task == 'pretrain':
+            print('Pretrain')
+            trainer = FinetuningBoth(args, device)
+            trainer.pretrain()
 
         print('Finished training seed: {}'.format(seed))
 
