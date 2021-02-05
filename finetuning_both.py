@@ -54,10 +54,10 @@ class FinetuningBoth():
         if not args.transformer:
             assert not args.cls_freeze and not args.concat and args.only_BCE, 'no cls_freeze, no concat, only BCE'
             if args.bert_induced:
-                filename = 'cls_learnable_finetune_both_rnn_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed)  # adjust this
+                filename = 'cls_learnable_finetune_both_rnn_{}_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed, args.pretrain_epochs)  # adjust this
                 pretrained_filename = 'cls_learnable_pretrained_both_rnn_{}_{}_{}'.format(args.bert_model, args.seed, args.pretrain_epochs)
             else:
-                filename = 'single_finetune_both_rnn_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed)
+                filename = 'single_finetune_both_rnn_{}_{}_{}_{}_onlyBCE'.format(target_file, args.bert_model, args.seed, args.pretrain_epochs)
                 pretrained_filename = 'single_pretrained_both_rnn_{}_{}_{}'.format(args.bert_model, args.seed, args.pretrain_epochs)
         elif args.transformer:
             raise NotImplementedError
@@ -328,9 +328,10 @@ class FinetuningBoth():
             self.pretrain_early_stopping(auprc_train)
             if self.pretrain_early_stopping.early_stop:
                 print('Early Stopping')
-                print('==========================================')
-                print('Finished pretraining, Start finetuning!')
-                print('==========================================')
+                break
+        print('==========================================')
+        print('Finished pretraining!')
+        print('==========================================')
 
 
 def main():
