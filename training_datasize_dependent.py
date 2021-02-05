@@ -278,7 +278,7 @@ class DataSize_Trainer():
                                     'auroc': best_mimic_auroc,
                                     'auprc': best_mimic_auprc,
                                     'epochs': n_epoch}, self.best_mimic_eval_path)
-                        print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
+                    print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
 
                     if not self.debug:
                         wandb.log({'train_loss': avg_train_loss,
@@ -296,7 +296,7 @@ class DataSize_Trainer():
                                     'auroc': best_eicu_auroc,
                                     'auprc': best_eicu_auprc,
                                     'epochs': n_epoch}, self.best_eicu_eval_path)
-                        print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
+                    print('[eicu] Model parameter saved at epoch {}'.format(n_epoch))
 
                 print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
                 print('[mimic/Valid]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(mimic_avg_eval_loss, mimic_auroc_eval, mimic_auprc_eval))
