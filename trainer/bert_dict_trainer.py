@@ -210,12 +210,13 @@ class bert_dict_Trainer():
                     best_loss = avg_eval_loss
                     best_auroc = auroc_eval
                     best_auprc = auprc_eval
-                    torch.save({'model_state_dict': self.model.state_dict(),
-                                'optimizer_state_dict': self.optimizer.state_dict(),
-                                'loss': best_loss,
-                                'auroc': best_auroc,
-                                'auprc': best_auprc,
-                                'epochs': n_epoch}, self.best_eval_path)
+                    if not self.debug:
+                        torch.save({'model_state_dict': self.model.state_dict(),
+                                    'optimizer_state_dict': self.optimizer.state_dict(),
+                                    'loss': best_loss,
+                                    'auroc': best_auroc,
+                                    'auprc': best_auprc,
+                                    'epochs': n_epoch}, self.best_eval_path)
                     print('Model parameter saved at epoch {}'.format(n_epoch))
 
                 if not self.debug:
