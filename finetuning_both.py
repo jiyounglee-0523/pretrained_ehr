@@ -72,7 +72,7 @@ class FinetuningBoth():
         print('')
         print('Finetuned model will be saved in {}'.format(finetune_path))
 
-        self.best_pretrain_path = pretrained_filename + '_best_auprc.pt'
+        self.best_pretrain_path = pretrain_path + '_best_auprc.pt'
         self.best_eval_path = finetune_path + '_best_auprc.pt'
         self.final_path = finetune_path + '_final.pt'
 
@@ -226,7 +226,7 @@ class FinetuningBoth():
                 item_target = item_target.to(self.device)
                 y_pred = self.model(item_embed, seq_len)
 
-                if self.BCE and self.target != 'dx_depth1_unqiue':
+                if self.BCE and self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.deivce))
                 else:
                     loss = self.criterion(y_pred, item_target.float().to(self.device))
@@ -350,7 +350,7 @@ def main():
     parser.add_argument('--pretrain_epochs', type=int)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
-    parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str, default='bio_bert')
+    parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str, default='bio_bert')
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
