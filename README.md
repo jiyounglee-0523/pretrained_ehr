@@ -223,3 +223,5 @@ v8.3: removed v8.2, fixed some datasize dependent
 v8.4: changed few_shot so we can run now
 
 v8.5: implemented pretrain on both and finetune individually
+
+v8.6: few-shot and datasize dependent for transformer
