@@ -61,7 +61,7 @@ class DataSize_Trainer():
         self.debug = args.debug
 
         if not self.debug:
-            wandb.init(project='no_early_stopping', entity='pretrained_ehr', config=args, reinit=True)
+            wandb.init(project=args.wandb_project_name, entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -94,9 +94,9 @@ class DataSize_Trainer():
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.source_file).to(device)
             print('bert freeze, cls_learnable, RNN')
             if args.concat:
-                filename = 'cls_learnable_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_learnable_rnn_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
             elif not args.concat:
-                filename = 'cls_learnable_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_learnable_rnn_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
 
         elif args.bert_induced and args.bert_freeze and not args.cls_freeze and args.transformer:
             model_directory = 'cls_learnable'
@@ -110,9 +110,9 @@ class DataSize_Trainer():
             self.model = dict_post_RNN(args=args, output_size=output_size, device=self.device, target_file=args.source_file).to(device)
             print('bert freeze, cls freeze')
             if args.concat:
-                filename = 'cls_fixed_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_fixed_rnn_{}_{}_dataportion{}_concat'.format(args.bert_model, args.seed, args.few_shot)
             elif not args.concat:
-                filename = 'cls_fixed_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
+                filename = 'cls_fixed_rnn_{}_{}_dataportion{}'.format(args.bert_model, args.seed, args.few_shot)
 
         elif args.bert_induced and not args.bert_freeze and not args.transformer:
             model_directory = 'bert_finetune'
@@ -174,9 +174,9 @@ class DataSize_Trainer():
         self.final_path = path + '_final.pt'
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.early_stopping = EarlyStopping(patience=100, verbose=True)
-        self.mimic_early_stopping = EarlyStopping(patience=100, verbose=True)
-        self.eicu_early_stopping = EarlyStopping(patience=100, verbose=True)
+        self.early_stopping = EarlyStopping(patience=50, verbose=True)
+        self.mimic_early_stopping = EarlyStopping(patience=50, verbose=True)
+        self.eicu_early_stopping = EarlyStopping(patience=50, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -314,6 +314,11 @@ class DataSize_Trainer():
 
                         self.test_both()
                         break
+
+        if self.source_file != 'both':
+            self.test()
+        elif self.source_file == 'both':
+            self.test_both()
 
 
     def evaluation(self):
@@ -529,7 +534,7 @@ def main():
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert', 'bert_mini', 'bert_small'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output2/')
     parser.add_argument('--device_number', type=int)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--concat', action='store_true')
@@ -540,12 +545,12 @@ def main():
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
-    parser.add_argument('--transformer_segment_embed', action='store_true')
+    parser.add_argument('--wandb_project_name', type=str)
     args = parser.parse_args()
 
     args.time_window = '12'
     args.rnn_model_type = 'gru'
-    args.batch_size = 256
+    args.batch_size = 512
     args.rnn_bidirection = False
     args.n_epochs = 1000
     args.word_max_length = 15   # tokenized word max_length, used in padding
@@ -558,8 +563,8 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    if args.item == 'all':
-        assert args.max_length == '300', 'when using all items, max length should be 300'
+    # if args.item == 'all':
+    #     assert args.max_length == '300', 'when using all items, max length should be 300'
 
     mp.set_sharing_strategy('file_system')
 
