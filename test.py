@@ -242,7 +242,7 @@ class Tester(nn.Module):
         self.target = args.target
 
         if not self.debug:
-            wandb.init(project='test_among_berts', entity='pretrained_ehr', config=args, reinit=True)
+            wandb.init(project=args.wandb_project_name, entity='pretrained_ehr', config=args, reinit=True)
 
         lr = args.lr
         self.n_epochs = args.n_epochs
@@ -281,7 +281,7 @@ class Tester(nn.Module):
                     filename = 'cls_learnable_{}_{}_concat'.format(args.bert_model, args.seed)
             elif not args.concat:
                 if args.only_BCE:
-                    filename = 'cls_learnable_{}_{}_onlyBCE'.format(args.bert_model, args.seed)
+                    filename = 'cls_learnable_{}_{}_{}_{}_onlyBCE'.format(args.bert_model, args.seed, args.lr_scheduler, args.lr)
                 elif not args.only_BCE:
                     filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
@@ -395,9 +395,9 @@ class Tester(nn.Module):
                     elif not args.only_BCE:
                         filename = 'trained_single_rnn_{}_concat'.format(args.seed)
                 elif not args.concat:
-                    if args.concat:
-                        filename = 'trained_single_rnn_{}_onlyBCE'.format(args.seed)
-                    elif not args.concat:
+                    if args.only_BCE:
+                        filename = 'trained_single_rnn_{}_{}_{}_onlyBCE'.format(args.seed, args.lr_scheduler, args.lr)
+                    elif not args.ony_BCE:
                         filename = 'trained_single_rnn_{}'.format(args.seed)
             elif args.transformer:
                 print('single Transformer')
@@ -453,7 +453,7 @@ class Tester(nn.Module):
                         target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_onlyBCE'.format(args.few_shot, args.source_file, args.test_file,
                                                                                                  args.bert_model, seed)
                     elif not args.only_BCE:
-                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_concat'.format(args.few_shot, args.source_file, args.test_file,
+                        target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file,
                                                                                                 args.bert_model, seed)
         elif args.transformer:
             if args.concat:
@@ -514,7 +514,7 @@ class Tester(nn.Module):
         print('Model will be saved in {}'.format(self.best_target_path))
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.early_stopping = EarlyStopping(patience=100, verbose=True)
+        self.early_stopping = EarlyStopping(patience=50, verbose=True)
         num_params = count_parameters(self.model)
         print('Number of parameters: {}'.format(num_params))
 
@@ -700,7 +700,7 @@ class Tester(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu'], type=str, default='mimic')
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
@@ -713,7 +713,7 @@ def main():
     # parser.add_argument('--hidden_dim', type=int, default=512)
     parser.add_argument('--rnn_bidirection', action='store_true')
     parser.add_argument('--n_epochs', type=int, default=500)
-    # parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str, default='bio_bert')
     parser.add_argument('--bert_freeze', action='store_true')
@@ -729,6 +729,8 @@ def main():
     parser.add_argument('--transformer_layers', type=int, default=2)
     parser.add_argument('--transformer_attn_heads', type=int, default=8)
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
+    parser.add_argument('--wandb_project_name', type=str)
+    parser.add_argument('--lr_scheduler', choices=['lambda30', 'lambda20', 'plateau'])
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
@@ -743,7 +745,6 @@ def main():
     args.dropout = 0.3
     args.embedding_dim = 128
     args.hidden_dim = 256
-    args.lr = 1e-4
 
     mp.set_sharing_strategy('file_system')
 

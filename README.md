@@ -219,3 +219,5 @@ v8.1: removed segment and min freq, implemented lr scheduler
 v8.2: retain best model and save at last
 
 v8.3: removed v8.2, fixed some datasize dependent  
+
+v8.4: changed few_shot so we can run now
