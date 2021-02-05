@@ -6,19 +6,19 @@ import os
 PATH = '/home/jylee/pretrained_ehr/rnn_model/'
 SRC_PATH = PATH+'main.py'
 
-device = 7
+device = 5
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
 
 target_list = ['los>3day']
-source_file_list = ['eicu']
+source_file_list = ['both']
 
 for i in range(len(target_list)):
    TRAINING_CONFIG = {
        "source_file": source_file_list[i],
        "target": target_list[i],
        "item": 'all',
-       "batch_size": 512,
+       "batch_size": 256,
        'lr': 1e-4,
        "bert_model": 'bio_clinical_bert',
        "device_number": str(device),

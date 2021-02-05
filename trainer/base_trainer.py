@@ -52,7 +52,7 @@ class Trainer(nn.Module):
                     filename = 'trained_single_rnn_{}_concat'.format(args.seed)
             elif not args.concat:
                 if args.only_BCE:
-                    filename = 'trained_single_rnn_{}_{}_{}_onlyBCE'.format(args.seed, args.lr_scheduler, args.lr)
+                    filename = 'trained_single_rnn_{}_{}_{}_{}_onlyBCE'.format(args.seed, args.lr_scheduler, args.lr, args.batch_size)
                 elif not args.only_BCE:
                     filename = 'trained_single_rnn_{}'.format(args.seed)
         elif args.transformer:

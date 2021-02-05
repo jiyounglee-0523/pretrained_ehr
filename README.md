@@ -217,3 +217,5 @@ v8.0: segment embedding, no min freq
 v8.1: removed segment and min freq, implemented lr scheduler
 
 v8.2: retain best model and save at last
+
+v8.3: removed v8.2, fixed some datasize dependent  
