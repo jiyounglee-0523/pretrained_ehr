@@ -55,6 +55,7 @@ class Few_Shot_Dataset(Dataset):
         self.bert_induced = args.bert_induced
         source_file = args.source_file
         self.transformer = args.transformer
+        few_shot = args.few_shot
 
         if test_file == 'both':
             if args.concat:
@@ -64,10 +65,19 @@ class Few_Shot_Dataset(Dataset):
                 eicu_path = os.path.join(args.input_path[:-1], item,
                                          'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, self.max_length, args.seed))
             elif not args.concat:
-                mimic_path = os.path.join(args.input_path[:-1], item,
-                                          'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
-                eicu_path = os.path.join(args.input_path[:-1], item,
-                                         'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
+                if few_shot ==  0.0 or few_shot == 1.0:
+                    mimic_path = os.path.join(args.input_path[:-1], item,
+                                              'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
+                    eicu_path = os.path.join(args.input_path[:-1], item,
+                                             'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
+                else:
+                    mimic_path = os.path.join(args.input_path[:-1], item,
+                                              'mimic_{}_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length,
+                                                                             args.seed, int(few_shot * 100)))
+                    eicu_path = os.path.join(args.input_path[:-1], item,
+                                             'eicu_{}_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length,
+                                                                           args.seed, int(few_shot * 100)))
+
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
 
@@ -92,7 +102,6 @@ class Few_Shot_Dataset(Dataset):
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
         else:
-            few_shot = args.few_shot
             if few_shot == 0.0 or few_shot == 1.0:
                 if args.concat:
                     path = os.path.join(args.input_path[:-1], item,
