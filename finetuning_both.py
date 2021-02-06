@@ -12,7 +12,6 @@ import argparse
 import tqdm
 
 from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader
-from models.transformer import Transformer
 from models.rnn_models import RNNmodels
 from models.rnn_bert_dict import dict_post_RNN
 from utils.trainer_utils import EarlyStopping

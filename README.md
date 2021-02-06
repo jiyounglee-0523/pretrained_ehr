@@ -227,3 +227,5 @@ v8.5: implemented pretrain on both and finetune individually
 v8.6: few-shot and datasize dependent for transformer
 
 v8.7: debugged pool -> finetune
+
+v8.8: pool_with_base.py   -> 100% mimic + 10% eicu

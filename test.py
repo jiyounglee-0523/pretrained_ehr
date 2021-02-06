@@ -396,7 +396,7 @@ class Tester(nn.Module):
                 elif not args.concat:
                     if args.only_BCE:
                         filename = 'trained_single_rnn_{}_{}_{}_onlyBCE'.format(args.seed, args.lr_scheduler, args.lr)
-                    elif not args.ony_BCE:
+                    elif not args.only_BCE:
                         filename = 'trained_single_rnn_{}'.format(args.seed)
             elif args.transformer:
                 print('single Transformer')
