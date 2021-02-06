@@ -183,14 +183,15 @@ class FinetuningBoth():
                                 'auorc': best_auroc,
                                 'auprc': best_auprc,
                                 'epochs': n_epoch}, self.best_eval_path)
-
-                    wandb.log({'train_loss': avg_train_loss,
-                               'train_auroc': auroc_train,
-                               'train_auprc': auprc_train,
-                               'eval_loss': avg_eval_loss,
-                               'eval_auroc': auroc_eval,
-                               'eval_auprc': auprc_eval})
                 print('Model parameter saved at epoch {}'.format(n_epoch))
+            if not self.debug:
+                wandb.log({'train_loss': avg_train_loss,
+                           'train_auroc': auroc_train,
+                           'train_auprc': auprc_train,
+                           'eval_loss': avg_eval_loss,
+                           'eval_auroc': auroc_eval,
+                           'eval_auprc': auprc_eval})
+
 
             print('[Train]  loss: {:.3f},  auroc: {:.3f},   auprc: {:.3f}'.format(avg_train_loss, auroc_train,
                                                                                   auprc_train))
