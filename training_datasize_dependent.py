@@ -280,10 +280,10 @@ class DataSize_Trainer():
                                     'epochs': n_epoch}, self.best_mimic_eval_path)
                     print('[mimic] Model parameter saved at epoch {}'.format(n_epoch))
 
-                    if not self.debug:
-                        wandb.log({'train_loss': avg_train_loss,
-                                   'train_auroc': auroc_train,
-                                   'train_auprc': auprc_train})
+                if not self.debug:
+                    wandb.log({'train_loss': avg_train_loss,
+                               'train_auroc': auroc_train,
+                               'train_auprc': auprc_train})
 
                 if best_eicu_auprc < eicu_auprc_eval:
                     best_eicu_loss = eicu_avg_eval_loss
@@ -377,11 +377,6 @@ class DataSize_Trainer():
             mimic_auroc_eval = roc_auc_score(truths_eval, preds_eval)
             mimic_auprc_eval = average_precision_score(truths_eval, preds_eval, average='micro')
 
-            if not self.debug:
-                wandb.log({'mimic_eval_loss': mimic_avg_eval_loss,
-                           'mimic_eval_auroc': mimic_auroc_eval,
-                           'mimic_eval_auprc': mimic_auprc_eval})
-
         preds_eval = []
         truths_eval = []
         eicu_avg_eval_loss = 0.0
@@ -408,7 +403,10 @@ class DataSize_Trainer():
             eicu_auprc_eval = average_precision_score(truths_eval, preds_eval, average='micro')
 
             if not self.debug:
-                wandb.log({'eicu_eval_loss': eicu_avg_eval_loss,
+                wandb.log({'mimic_eval_loss': mimic_avg_eval_loss,
+                           'mimic_eval_auroc': mimic_auroc_eval,
+                           'mimic_eval_auprc': mimic_auprc_eval,
+                           'eicu_eval_loss': eicu_avg_eval_loss,
                            'eicu_eval_auroc': eicu_auroc_eval,
                            'eicu_eval_auprc': eicu_auprc_eval})
 
