@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output2/')
     # parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
     parser.add_argument('--device_number', type=str)
     parser.add_argument('--notes', type=str)
@@ -52,20 +52,27 @@ def main():
     args.embedding_dim = 128
     args.hidden_dim = 256
 
-    if args.bert_induced and args.bert_freeze:
+    # if args.bert_induced and args.bert_freeze:
+    #     from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
+    #     from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
+    #     print('bert induced')
+    #
+    # if args.bert_induced and not args.bert_freeze:
+    #     from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
+    #     from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+    #     print('bert finetune')
+    #
+    # elif not args.bert_induced:
+    #     from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
+    #     from trainer.base_trainer import Trainer
+    #     print('single_rnn')
+
+    if args.bert_induced:
         from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-        from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
-        print('bert induced')
-
-    if args.bert_induced and not args.bert_freeze:
-        from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
-        from trainer.bert_induced_trainer import Bert_Trainer as Trainer
-        print('bert finetune')
-
-    elif not args.bert_induced:
+        from trainer.evaluation_both_trainer import bert_dict_Trainer as Trainer
+    else:
         from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-        from trainer.base_trainer import Trainer
-        print('single_rnn')
+        from trainer.base_trainer_evaluateonboth import Trainer
 
     # if args.time_window == '12':
     #     assert args.max_length == '150', "time_window of 12 should have max length of 150!"
