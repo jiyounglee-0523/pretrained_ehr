@@ -15,7 +15,7 @@ def main():
     parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--batch_size', type=int, default=512)
     # parser.add_argument('--dropout', type=float, default=0.1)
     # parser.add_argument('--embedding_dim', type=int, default=768)
     # parser.add_argument('--hidden_dim', type=int, default=512)
@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
     parser.add_argument('--wandb_project_name', type=str, default='aa')
     parser.add_argument('--lr_scheduler', choices=['lambda30', 'lambda20', 'plateau'])
+    parser.add_argument('--rnn_bottom', action='store_true')
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -52,35 +53,34 @@ def main():
     args.embedding_dim = 128
     args.hidden_dim = 256
 
-    # if args.bert_induced and args.bert_freeze:
-    #     from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-    #     from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
-    #     print('bert induced')
-    #
-    # if args.bert_induced and not args.bert_freeze:
-    #     from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
-    #     from trainer.bert_induced_trainer import Bert_Trainer as Trainer
-    #     print('bert finetune')
-    #
-    # elif not args.bert_induced:
-    #     from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-    #     from trainer.base_trainer import Trainer
-    #     print('single_rnn')
+    if not args.rnn_bottom:
+        if args.bert_induced and args.bert_freeze:
+            from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
+            from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
+            print('bert induced')
 
-    if args.bert_induced:
-        from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-        from trainer.evaluation_both_trainer import bert_dict_Trainer as Trainer
+        if args.bert_induced and not args.bert_freeze:
+            from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
+            from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+            print('bert finetune')
+
+        elif not args.bert_induced:
+            from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
+            from trainer.base_trainer import Trainer
+            print('single_rnn')
     else:
-        from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-        from trainer.base_trainer_evaluateonboth import Trainer
+        if args.bert_induced and args.bert_freeze:
+            from dataset.rnn_bottom_dataloader import singlernn_get_dataloader as get_dataloader
 
-    # if args.time_window == '12':
-    #     assert args.max_length == '150', "time_window of 12 should have max length of 150!"
-    # elif args.time_window == '24':
-    #     assert args.max_length == '200', "time_window of 24 should have max length of 200!"
+# ================= not in use ===========================
+    # if args.bert_induced:
+    #     from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
+    #     from trainer.evaluation_both_trainer import bert_dict_Trainer as Trainer
+    # else:
+    #     from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
+    #     from trainer.base_trainer_evaluateonboth import Trainer
+# ================= not in use ============================
 
-    # if args.item == 'all':
-    #     assert args.max_length == '300', 'when using all items, max length should be 300'
 
     mp.set_sharing_strategy('file_system')
 
