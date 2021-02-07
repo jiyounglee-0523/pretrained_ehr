@@ -231,3 +231,7 @@ v8.7: debugged pool -> finetune
 v8.8: pool_with_base.py   -> 100% mimic + 10% eicu
 
 v8.9: added visualization and table generation code
+
+v9.0 : train on mimic -> test on both
+
+v9.1 : few_train_few_shot.py: train 10% mimic -> finetune 10% eicu -> test on eicu
