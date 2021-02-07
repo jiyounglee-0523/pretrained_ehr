@@ -84,6 +84,7 @@ def main():
 
     mp.set_sharing_strategy('file_system')
 
+    print('start running')
     SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
 
     for seed in SEED:
