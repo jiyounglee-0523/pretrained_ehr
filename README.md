@@ -235,3 +235,5 @@ v8.9: added visualization and table generation code
 v9.0 : train on mimic -> test on both
 
 v9.1 : few_train_few_shot.py: train 10% mimic -> finetune 10% eicu -> test on eicu
+
+v9.2 : rnn_bottom.py: finetuneRNN

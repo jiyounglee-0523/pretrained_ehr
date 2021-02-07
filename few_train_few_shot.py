@@ -299,7 +299,7 @@ class FewTrain():
                 best_auprc = auprc_eval
                 if not self.debug:
                     torch.save({'model_state_dict': self.model.state_dict(),
-                                'optimizer_state_dict': self.optimizer.state_dict(),
+                                'optimizer_state_dict': self.source_optimizer.state_dict(),
                                 'loss': best_loss,
                                 'auroc': best_auroc,
                                 'auprc': best_auprc,

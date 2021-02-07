@@ -40,7 +40,6 @@ def main():
     parser.add_argument('--transformer_hidden_dim', type=int, default=256)
     parser.add_argument('--wandb_project_name', type=str, default='aa')
     parser.add_argument('--lr_scheduler', choices=['lambda30', 'lambda20', 'plateau'])
-    parser.add_argument('--rnn_bottom', action='store_true')
     args = parser.parse_args()
 
     # args.device_number = 6
@@ -53,24 +52,21 @@ def main():
     args.embedding_dim = 128
     args.hidden_dim = 256
 
-    if not args.rnn_bottom:
-        if args.bert_induced and args.bert_freeze:
-            from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-            from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
-            print('bert induced')
+    if args.bert_induced and args.bert_freeze:
+        from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
+        from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
+        print('bert induced')
 
-        if args.bert_induced and not args.bert_freeze:
-            from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
-            from trainer.bert_induced_trainer import Bert_Trainer as Trainer
-            print('bert finetune')
+    if args.bert_induced and not args.bert_freeze:
+        from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
+        from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+        print('bert finetune')
 
-        elif not args.bert_induced:
-            from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-            from trainer.base_trainer import Trainer
-            print('single_rnn')
-    else:
-        if args.bert_induced and args.bert_freeze:
-            from dataset.rnn_bottom_dataloader import singlernn_get_dataloader as get_dataloader
+    elif not args.bert_induced:
+        from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
+        from trainer.base_trainer import Trainer
+        print('single_rnn')
+
 
 # ================= not in use ===========================
     # if args.bert_induced:
