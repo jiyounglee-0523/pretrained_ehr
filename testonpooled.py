@@ -54,10 +54,13 @@ class PoolTester():
             output_size = 1
 
 
-        if args.bert_induced:
+        if args.bert_induced and not args.cls_freeze:
             filename = 'cls_learnable_both_{}_{}_{}_onlyBCE'.format(args.target_file, args.bert_model, args.seed)
             path = os.path.join(args.path, args.item, 'cls_learnable', 'both', file_target_name, filename)
             self.model = dict_post_RNN(args, output_size, device, target_file='both').to(self.device)
+
+        elif args.bert_induced and args.cls_freeze:
+            filename = 'cls_fixed_both{}_{}_{}_onlyBCE'.format(args.target_file, args.bert_model, args.seed)
 
         else:
             if args.item == 'lab':

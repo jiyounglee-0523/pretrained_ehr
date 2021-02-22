@@ -3,11 +3,11 @@ import os
 
 # Configuration before run
 
-PATH = '/home/jylee/pretrained_ehr/rnn_model/'
+PATH = '/data/private/fixed/rnn_model/'
 SRC_PATH = PATH+'training_datasize_dependent.py'
 
-device = 0
-data_portion_list = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+device = 3
+data_portion_list = [0.1]
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(device)
 
@@ -17,15 +17,15 @@ for data_portion in data_portion_list:
         "bert_induced": True,
         "source_file": 'eicu',
         "few_shot": data_portion,
-        "target": 'readmission',
+        "target": 'los>7day',
         "item": 'all',
         "max_length": 150,
         "bert_model": 'bio_clinical_bert',
         "bert_freeze": True,
-        "path": '/home/jylee/data/pretrained_ehr/output/KDD_output/',
+        "input_path": '/data/private/input_data/',
+        "path": '/data/private/KDD_output2/',
         "device_number": device,
         "only_BCE": True,
-        "input_path": './',
         "wandb_project_name": 'new_rnn_datasizedependent'
     }
 
