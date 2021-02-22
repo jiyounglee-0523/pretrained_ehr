@@ -8,26 +8,26 @@ import pickle
 import os
 import re
 
-from dataset.prebert_dataloader import healthcare_dataset
+from dataset.bert_finetune_dataloader import healthcare_dataset
 
 
-def bertinduced_dict_get_dataloader(args, data_type='train', data_name=None):
+def DescEmb_get_dataloader(args, data_type='train', data_name=None):
     if data_type == 'train':
-        train_data = bert_dict_dataset(args, data_type, data_name=data_name)
+        train_data = DescEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'eval':
-        eval_data = bert_dict_dataset(args, data_type, data_name=data_name)
+        eval_data = DescEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'test':
-        test_data = bert_dict_dataset(args, data_type, data_name=data_name)
+        test_data = DescEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
     return dataloader
 
 
 
-class bert_dict_dataset(Dataset):
+class DescEmb_dataset(Dataset):
     def __init__(self, args, data_type, data_name=None):
         if data_name is None:
             source_file = args.source_file
@@ -91,12 +91,7 @@ class bert_dict_dataset(Dataset):
 
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
-        # check data path
-        if args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
-                                          '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window, args.bert_model))
-        elif not args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
+        vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
                                       '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window, args.bert_model))
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
@@ -104,10 +99,6 @@ class bert_dict_dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
-        # single_order_offset = self.item_offset_order[item]
-        # padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
-        # single_order_offset = torch.cat((single_order_offset, padding), dim=0)
-
         single_item_name = self.item_name[item]
         seq_len = torch.Tensor([len(single_item_name)])
         embedding = []
@@ -116,15 +107,10 @@ class bert_dict_dataset(Dataset):
             return self.id_dict[x]
         embedding = list(map(embed_dict, single_item_name))     # list with length seq_len
         embedding = torch.Tensor(embedding)
-        # if self.transformer:
-        #     embedding = embedding + 1
-        #     single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)    # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
         assert list(embedding.shape)[0] == int(self.max_length), "padding wrong!"
-        # if self.transformer:
-        #     embedding = torch.cat((torch.Tensor([1]), embedding), dim=0)    # 1 for cls
 
         single_target = self.item_target[item]
         if self.target == 'dx_depth1_unique':
@@ -134,11 +120,7 @@ class bert_dict_dataset(Dataset):
             single_target = torch.zeros(18)
             single_target[target_list - 1] = 1   # shape of 18
 
-        # implement single_length later
-        if not self.transformer:
-            return embedding, single_target, seq_len
-        # elif self.transformer:
-        #     return embedding, single_target, single_order_offset
+        return embedding, single_target, seq_len
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         if time_window == 'Total':

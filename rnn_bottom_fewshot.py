@@ -30,40 +30,23 @@ class RNNbottomDataset(Dataset):
         time_window = args.time_window
         self.word_max_length = args.word_max_length
 
-        if args.source_file == 'both':
-            mimic_path = os.path.join(args.input_path[:-1], item, 'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
-            mimic = pickle.load(open(mimic_path, 'rb'))
-
-            eicu_path = os.path.join(args.input_path[:-1], item, 'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, self.max_length, args.seed))
-            eicu = pickle.load(open(eicu_path, 'rb'))
-
-            mimic_item_name, mimic_item_target = self.preprocess(mimic, data_type, item, time_window, self.target)
-            eicu_item_name, eicu_item_target = self.preprocess(eicu, data_type, item, time_window, self.target)
-
-            mimic_item_name.extend(eicu_item_name)
-            self.item_name = mimic_item_name
-
-            if self.target == 'dx_depth1_unique':
-                mimic_item_target.extend(eicu_item_target)
-                self.item_target = mimic_item_target
-            else:
-                self.item_target = torch.cat((mimic_item_target, eicu_item_target))
-            id_dict_path = os.path.join(args.input_path, 'subword2index_both_all.pkl')
-
+        if args.few_shot == 0.0 or args.few_shot == 1.0:
+            path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}.pkl'.format(args.test_file, time_window, item, self.max_length, args.seed))
         else:
-            path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}.pkl'.format(args.source_file, time_window, item, self.max_length, args.seed))
-            data = pickle.load(open(path, 'rb'))
+            path = os.path.join(args.input_path[:-1], item, '{}_{}_{}_{}_{}_{}.pkl'.format(args.test_file, time_window, item, self.max_length, args.seed, int(args.few_shot * 100)))
 
-            if args.source_file == 'mimic':
-                data = data.rename({'HADM_ID': 'ID'}, axis='columns')
+        data = pickle.load(open(path, 'rb'))
 
-            elif args.source_file == 'eicu':
-                data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+        if args.test_file == 'mimic':
+            data = data.rename({'HADM_ID': 'ID'}, axis='columns')
 
-            self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
-            id_dict_path = os.path.join(args.input_path[:-1], 'subword2index_{}_all.pkl'.format(args.source_file))
+        elif args.test_file == 'eicu':
+            data = data.rename({'patientunitstayid': 'ID'}, axis='columns')
+
+        self.item_name, self.item_target = self.preprocess(data, data_type, item, time_window, self.target)
 
         self.tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+        id_dict_path = os.path.join(args.input_path[:-1], 'subword2index_{}_all.pkl'.format(args.test_file))
         self.id_dict = pickle.load(open(id_dict_path, 'rb'))
 
     def __len__(self):
@@ -144,13 +127,7 @@ class RNNBottom(nn.Module):
         self.device = device
         self.bottom_hidden_size = args.bottom_hidden_size
         self.word_max_length = args.word_max_length
-        if args.source_file == 'both':
-            vocab_size = 1357
-        elif args.source_file == 'mimic':
-            vocab_size = 1176
-        elif args.source_file == 'eicu':
-            vocab_size = 813
-
+        vocab_size = 1176 if args.test_file == 'mimic' else 813
         self.embedding = nn.Embedding(vocab_size, args.bottom_embedding_size)
         self.model = nn.GRU(args.bottom_embedding_size, args.bottom_hidden_size, num_layers=1, dropout=args.dropout, batch_first=True, bidirectional=True)
 
@@ -212,7 +189,7 @@ class RNNBottomTrainer():
         lr = args.lr
         self.n_epochs = args.n_epochs
 
-        # wandb.init(project= args.wandb_project_name, entity='pretrained_ehr', config=args, reinit=True)
+        wandb.init(project= args.wandb_project_name, entity='pretrained_ehr', config=args, reinit=True)
 
         self.criterion = nn.BCEWithLogitsLoss()
         if args.target == 'dx_depth1_unique':
@@ -228,10 +205,20 @@ class RNNBottomTrainer():
 
         self.model = RNNtop(args, output_size, device).to(device)
         model_directory = 'bert_finetune'
-        filename = 'finetuning_bottomrnn_{}_{}_best_auprc.pt'.format(args.seed, args.bottom_embedding_size)
+        source_filename = 'finetuning_bottomrnn_{}_best_auprc.pt'.format(args.seed)
+        source_best_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, source_filename)
+        print('Load path: {}'.format(source_best_path))
 
-        self.best_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
-        print('path: {}'.format(self.best_path))
+        target_filename = 'finetuning_fewshot{}_bottomrnn_from{}_to{}_seed{}_best_auprc.pt'.format(args.few_shot, args.source_file, args.test_file, args.seed)
+        self.target_best_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
+        print('Save path: {}'.format(self.target_best_path))
+
+        # load parameters
+        ckpt = torch.load(source_best_path)
+        pretrained_dict = ckpt['model_state_dict']
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if not 'embedding' in k}
+        self.model.load_state_dict(pretrained_dict, strict=False)
+        print('Model partially loaded!')
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.early_stopping = EarlyStopping(patience=20, verbose=True)
@@ -283,15 +270,15 @@ class RNNBottomTrainer():
                             'loss': best_loss,
                             'auroc': best_auroc,
                             'auprc': best_auprc,
-                            'epochs': n_epoch}, self.best_path)
+                            'epochs': n_epoch}, self.target_best_path)
                 print('Model parameter saved at epoch {}'.format(n_epoch))
 
-            # wandb.log({'train_loss': avg_train_loss,
-            #            'train_auroc': auroc_train,
-            #            'train_auprc': auprc_train,
-            #            'eval_loss': avg_eval_loss,
-            #            'eval_auroc': auroc_eval,
-            #            'eval_auprc': auprc_eval})
+            wandb.log({'train_loss': avg_train_loss,
+                       'train_auroc': auroc_train,
+                       'train_auprc': auprc_train,
+                       'eval_loss': avg_eval_loss,
+                       'eval_auroc': auroc_eval,
+                       'eval_auprc': auprc_eval})
 
             print('[Train]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_train_loss, auroc_train, auprc_train))
             print('[Valid]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_eval_loss, auroc_eval, auprc_eval))
@@ -333,7 +320,7 @@ class RNNBottomTrainer():
         return avg_eval_loss, auroc_eval, auprc_eval
 
     def test(self):
-        ckpt = torch.load(self.best_path)
+        ckpt = torch.load(self.target_best_path)
         self.model.load_state_dict(ckpt['model_state_dict'])
         self.model.eval()
 
@@ -361,11 +348,47 @@ class RNNBottomTrainer():
             auroc_test = roc_auc_score(truths_test, preds_test)
             auprc_test = average_precision_score(truths_test, preds_test, average='micro')
 
-            # wandb.log({'test_loss': avg_test_loss,
-            #            'test_auroc': auroc_test,
-            #            'test_auprc': auprc_test})
+            wandb.log({'test_loss': avg_test_loss,
+                       'test_auroc': auroc_test,
+                       'test_auprc': auprc_test})
 
             print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test, auprc_test))
+
+    def zero_test(self):
+        self.model.eval()
+
+        preds_test = []
+        truths_test = []
+        avg_test_loss = 0.
+
+        with torch.no_grad():
+            for iter, sample in enumerate(self.test_dataloader):
+                item_id, item_target, seq_len = sample
+                item_id = item_id.to(self.device)
+                item_target = item_target.to(self.device)
+
+                y_pred = self.model(item_id, seq_len)
+                if self.BCE and self.target != 'dx_depth1_unique':
+                    loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
+                else:
+                    loss = self.criterion(y_pred, item_target.float().to(self.device))
+                avg_test_loss += loss.item() / len(self.test_dataloader)
+
+                probs_test = torch.sigmoid(y_pred).detach().cpu().numpy()
+                preds_test += list(probs_test.flatten())
+                truths_test += list(item_target.detach().cpu().numpy().flatten())
+
+            auroc_test = roc_auc_score(truths_test, preds_test)
+            auprc_test = average_precision_score(truths_test, preds_test, average='micro')
+
+            wandb.log({'test_loss': avg_test_loss,
+                           'test_auroc': auroc_test,
+                           'test_auprc': auprc_test})
+
+            print('[Test]  loss: {:.3f},     auroc: {:.3f},     auprc:   {:.3f}'.format(avg_test_loss, auroc_test, auprc_test))
+
+
+
 
 
 
@@ -373,15 +396,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bert_induced', action='store_true')
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--test_file', choices=['mimic', 'eicu'], type=str)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
     parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='lab')
+    parser.add_argument('--few_shot', choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], type=float)
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--bottom_embedding_size', type=int)
     parser.add_argument('--bottom_hidden_size', type=int)
     parser.add_argument('--n_epochs', type=int, default=1000)
-    parser.add_argument('--lr', type=float)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny', 'bert_small'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
@@ -400,7 +425,7 @@ def main():
     parser.add_argument('--wandb_project_name', type=str)
     args = parser.parse_args()
 
-    args.word_max_length = 30 if args.source_file == 'mimic' else 36
+    args.word_max_length = 30 if args.test_file == 'mimic' else 36
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -426,11 +451,11 @@ def main():
         args.seed = seed
 
         trainer = RNNBottomTrainer(args, device)
-        trainer.train()
 
-
-        print('seed_number', args.seed)
-
+        if args.few_shot == 0.0:
+            trainer.zero_test()
+        else:
+            trainer.train()
 
 if __name__ == '__main__':
     main()
