@@ -13,21 +13,21 @@ import os
 TO-DO: Implement Total (eicu and mimic combined)
 """
 
-def bertinduced_get_dataloader(args, data_type='train', data_name=None):
+def bertfinetune_get_dataloader(args, data_type='train', data_name=None):
     if data_type == 'train':
-        train_data = healthcare_dataset(args, data_type)
+        train_data = bertfinetune_dataset(args, data_type)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'eval':
-        eval_data = healthcare_dataset(args, data_type)
+        eval_data = bertfinetune_dataset(args, data_type)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True, num_workers=16)
 
     elif data_type == 'test':
-        test_data = healthcare_dataset(args, data_type, data_name=data_name)
+        test_data = bertfinetune_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False, num_workers=16)
     return dataloader
 
-class healthcare_dataset(Dataset):
+class bertfinetune_dataset(Dataset):
     def __init__(self, args, data_type, data_name=None):
         if data_name is None:
             source_file = args.source_file

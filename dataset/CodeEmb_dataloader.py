@@ -8,23 +8,23 @@ import os
 
 import pickle
 
-def singlernn_get_dataloader(args, data_type = 'train', data_name = None):
+def CodeEmb_get_dataloader(args, data_type = 'train', data_name = None):
     if data_type == 'train':
-        train_data = eicu_dataset(args, data_type, data_name=data_name)
+        train_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'eval':
-        eval_data = eicu_dataset(args, data_type, data_name=data_name)
+        eval_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'test':
-        test_data = eicu_dataset(args, data_type, data_name=data_name)
+        test_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
 
     return dataloader
 
 
-class eicu_dataset(Dataset):
+class CodeEmb_dataset(Dataset):
     def __init__(self, args, data_type, data_name=None):
         if data_name is None:
             source_file = args.source_file
@@ -36,19 +36,13 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         self.max_length = max_length
         time_window = args.time_window
-        self.transformer = args.transformer
 
         if source_file == 'both':
-            if args.concat:
-                mimic_path = os.path.join(args.input_path[:-1], item,
-                                    'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join(args.input_path[:-1], item,
-                                    'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
-            elif not args.concat:
-                mimic_path = os.path.join(args.input_path[:-1], item,
-                                    'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join(args.input_path[:-1], item,
-                                          'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+
+            mimic_path = os.path.join(args.input_path[:-1], item,
+                                'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+            eicu_path = os.path.join(args.input_path[:-1], item,
+                                      'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
 
@@ -73,12 +67,8 @@ class eicu_dataset(Dataset):
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
         else:
-            if args.concat:
-                path = os.path.join(args.input_path[:-1], item,
-                                '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, max_length, args.seed))
-            elif not args.concat:
-                path = os.path.join(args.input_path[:-1], item,
-                                '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
+            path = os.path.join(args.input_path[:-1], item,
+                            '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -89,14 +79,9 @@ class eicu_dataset(Dataset):
 
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
-        if args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
-                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window,
-                                                                                 args.bert_model))
-        elif not args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
+        vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
                                       '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window,
-                                                                          args.bert_model))  ################### bert model?
+                                                                          args.bert_model))
 
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
@@ -105,10 +90,6 @@ class eicu_dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
-        # single_item_offset = self.item_offset[item]
-        # single_order_offset = self.item_offset_order[item]
-        # padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
-        # single_order_offset = torch.cat((single_order_offset, padding), dim=0)
         single_target = self.item_target[item]
 
         if self.target == 'dx_depth1_unique':
@@ -127,19 +108,11 @@ class eicu_dataset(Dataset):
             return self.id_dict[x]
         embedding = list(map(embed_dict, single_item_name))
         embedding = torch.Tensor(embedding)
-        # if self.transformer:
-        #     embedding = embedding + 1
-        #     single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)   # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
-        # if self.transformer:
-        #     embedding = torch.cat((torch.Tensor([1]), embedding), dim=0)   # 1 for cls
+        return embedding, single_target, seq_len
 
-        if not self.transformer:
-            return embedding, single_target, seq_len
-        # elif self.transformer:
-        #     return embedding, single_target, single_order_offset
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         # time window

@@ -14,11 +14,11 @@ import wandb
 import tqdm
 import numpy as np
 
-from test import Few_Shot_Dataset
+from few_shot import Few_Shot_Dataset
 from utils.loss import *
-from models.rnn_bert_dict import *
-from models.rnn_models import *
-from models.prebert import *
+from models.DescEmb import *
+from models.CodeEmb import *
+from models.bert_finetuning import *
 from models.transformer import *
 from utils.trainer_utils import *
 

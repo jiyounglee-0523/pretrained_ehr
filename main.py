@@ -9,62 +9,40 @@ import os
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--bert_induced', action='store_true')
-    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic')
+    parser.add_argument('--DescEmb', action='store_true', help='True if DescEmb, False if CodeEmb')
+    parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic', help='both for pooling')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
     parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
-    parser.add_argument('--rnn_model_type', choices=['gru', 'lstm'], type=str, default='gru')
-    parser.add_argument('--batch_size', type=int, default=512)
-    # parser.add_argument('--dropout', type=float, default=0.1)
-    # parser.add_argument('--embedding_dim', type=int, default=768)
-    # parser.add_argument('--hidden_dim', type=int, default=512)
-    # parser.add_argument('--rnn_bidirection', action='store_true')
+    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--dropout', type=float, default=0.3)
+    parser.add_argument('--embedding_dim', type=int, default=128)
+    parser.add_argument('--hidden_dim', type=int, default=256)
     parser.add_argument('--n_epochs', type=int, default=1000)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny', 'bert_small'], type=str)
     parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
-    parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output2/')
+    parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/', help='data directory')
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
     # parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=str)
-    parser.add_argument('--notes', type=str)
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--concat', action='store_true')
-    parser.add_argument('--only_BCE', action='store_true')
-    parser.add_argument('--transformer', action='store_true')
-    parser.add_argument('--transformer_layers', type=int, default=2)
-    parser.add_argument('--transformer_attn_heads', type=int, default=8)
-    parser.add_argument('--transformer_hidden_dim', type=int, default=256)
-    parser.add_argument('--wandb_project_name', type=str, default='aa')
-    parser.add_argument('--lr_scheduler', choices=['lambda30', 'lambda20', 'plateau'])
     args = parser.parse_args()
 
-    # args.device_number = 6
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    args.rnn_bidirection = False
 
-    # hyperparameter tuning
-    args.dropout = 0.3
-    args.embedding_dim = 128
-    args.hidden_dim = 256
+    if args.DescEmb and args.bert_freeze:
+        from dataset.DescEmb_dataloader import DescEmb_get_dataloader as get_dataloader
+        from trainer.DescEmb_trainer import DescEmb_Trainer as Trainer
+        print('DescEmb')
 
-    if args.bert_induced and args.bert_freeze:
-        from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-        from trainer.bert_dict_trainer import bert_dict_Trainer as Trainer
-        print('bert induced')
-
-    if args.bert_induced and not args.bert_freeze:
-        from dataset.prebert_dataloader import bertinduced_get_dataloader as get_dataloader
-        from trainer.bert_induced_trainer import Bert_Trainer as Trainer
+    if args.DescEmb and not args.bert_freeze:
+        from dataset.bert_finetune_dataloader import bertfinetune_get_dataloader as get_dataloader
+        from trainer.bert_finetune_trainer import BertFinetune_Trainer as Trainer
         print('bert finetune')
 
-    elif not args.bert_induced:
-        from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-        from trainer.base_trainer import Trainer
+    elif not args.DescEmb:
+        from dataset.CodeEmb_dataloader import CodeEmb_get_dataloader as get_dataloader
+        from trainer.CodeEmb_trainer import Trainer
         print('single_rnn')
 
 
