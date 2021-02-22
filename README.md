@@ -1,3 +1,21 @@
+# Unifying Heterogeneous Electronic Health Record Systems via Clinical Text-Based Code Embedding (KDD 2021 Under Review)
+
+This repository provides Pytorch code to implement DescEmb, a code-agnostic EHR predictive model. 
+
+
+
+## File Explanation
+
+To train a model, implement *main.py*.
+
+
+
+
+
+
+
+
+
 ##  Directory Settings
 
 ```
