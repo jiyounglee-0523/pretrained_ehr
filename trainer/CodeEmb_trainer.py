@@ -41,31 +41,31 @@ class Trainer(nn.Module):
         # vocab size for each
         if args.source_file == 'mimic':
             if args.item == 'lab':
-                vocab_size = 5110 if args.concat else 359
+                vocab_size = 359
             elif args.item == 'med':
-                vocab_size = 2211 if args.concat else 1535
+                vocab_size = 1535
             elif args.item == 'inf':
                 vocab_size = 485
             elif args.item == 'all':
-                vocab_size = 7563 if args.concat else 2377
+                vocab_size = 2377
         elif args.source_file == 'eicu':
             if args.item == 'lab':
-                vocab_size = 9659 if args.concat else 134
+                vocab_size = 134
             elif args.item == 'med':
-                vocab_size = 2693 if args.concat else 1283
+                vocab_size = 1283
             elif args.item == 'inf':
                 vocab_size = 495
             elif args.item == 'all':
-                vocab_size = 8532 if args.concat else 1344
+                vocab_size = 1344
         elif args.source_file == 'both':
             if args.item == 'lab':
-                vocab_size = 14371 if args.concat else 448
+                vocab_size = 448
             elif args.item == 'med':
-                vocab_size = 4898 if args.concat else 2812
+                vocab_size = 2812
             elif args.item == 'inf':
                 vocab_size = 979
             elif args.item == 'all':
-                vocab_size = 15794 if args.concat else 3672
+                vocab_size = 3672
 
 
         self.criterion = nn.BCEWithLogitsLoss()
@@ -162,7 +162,7 @@ class Trainer(nn.Module):
 
                 y_pred = self.model(item_id, lengths)
 
-                if self.BCE and self.target != 'dx_depth1_unique':
+                if self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, target.unsqueeze(1).float().to(self.device))
                 else:
                     loss = self.criterion(y_pred, target.float().to(self.device))
@@ -194,7 +194,7 @@ class Trainer(nn.Module):
 
                 y_pred = self.model(item_id, seq_len)
 
-                if self.BCE and self.target != 'dx_depth1_unique':
+                if self.target != 'dx_depth1_unique':
                     loss = self.criterion(y_pred, item_target.unsqueeze(1).float().to(self.device))
                 else:
                     loss = self.criterion(y_pred, item_target.float().to(self.device))

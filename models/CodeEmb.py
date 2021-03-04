@@ -19,7 +19,7 @@ class CodeEmb(nn.Module):
         self.device = device
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
+        self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True)
 
         self.output_fc = nn.Linear(self.hidden_dim, output_size)
 

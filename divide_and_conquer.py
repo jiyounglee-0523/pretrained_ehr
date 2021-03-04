@@ -6,30 +6,28 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 import pickle
-import wandb
 import os
 import argparse
 import easydict
 
-import wandb
 
-def singlernn_get_dataloader(args, data_type = 'train', data_name = None):
+def CodeEmb_get_dataloader(args, data_type = 'train', data_name = None):
     if data_type == 'train':
-        train_data = eicu_dataset(args, data_type, data_name=data_name)
+        train_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=train_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'eval':
-        eval_data = eicu_dataset(args, data_type, data_name=data_name)
+        eval_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=eval_data, batch_size=args.batch_size, shuffle=True)
 
     elif data_type == 'test':
-        test_data = eicu_dataset(args, data_type, data_name=data_name)
+        test_data = CodeEmb_dataset(args, data_type, data_name=data_name)
         dataloader = DataLoader(dataset=test_data, batch_size=args.batch_size, shuffle=False)
 
     return dataloader
 
 
-class eicu_dataset(Dataset):
+class CodeEmb_dataset(Dataset):
     def __init__(self, args, data_type, data_name=None):
         if data_name is None:
             source_file = args.source_file
@@ -41,19 +39,14 @@ class eicu_dataset(Dataset):
         max_length = args.max_length
         self.max_length = max_length
         time_window = args.time_window
-        self.transformer = args.transformer
 
         if source_file == 'both':
-            if args.concat:
-                mimic_path = os.path.join(args.input_path[:-1], item,
-                                    'mimic_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join(args.input_path[:-1], item,
-                                    'eicu_{}_{}_{}_{}_concat.pkl'.format(time_window, item, max_length, args.seed))
-            elif not args.concat:
-                mimic_path = os.path.join(args.input_path[:-1], item,
-                                    'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
-                eicu_path = os.path.join(args.input_path[:-1], item,
-                                          'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+
+
+            mimic_path = os.path.join(args.input_path[:-1], item,
+                                'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
+            eicu_path = os.path.join(args.input_path[:-1], item,
+                                      'eicu_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
             mimic = pickle.load(open(mimic_path, 'rb'))
             eicu = pickle.load(open(eicu_path, 'rb'))
 
@@ -78,12 +71,8 @@ class eicu_dataset(Dataset):
                 self.item_target = torch.cat((mimic_item_target, eicu_item_target))
 
         else:
-            if args.concat:
-                path = os.path.join(args.input_path[:-1], item,
-                                '{}_{}_{}_{}_{}_concat.pkl'.format(source_file, time_window, item, max_length, args.seed))
-            elif not args.concat:
-                path = os.path.join(args.input_path[:-1], item,
-                                '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
+            path = os.path.join(args.input_path[:-1], item,
+                            '{}_{}_{}_{}_{}.pkl'.format(source_file, time_window, item, max_length, args.seed))
             data = pickle.load(open(path, 'rb'))
 
             # change column name
@@ -94,15 +83,10 @@ class eicu_dataset(Dataset):
 
             self.item_name, self.item_target, self.item_offset_order = self.preprocess(data, data_type, item, time_window, self.target)
 
-        if args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
-                                      '{}_{}_{}_{}_concat_word2embed.pkl'.format(args.source_file, item, time_window,
-                                                                                 args.bert_model))
-        elif not args.concat:
-            vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
-                                      '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window,
-                                                                          args.bert_model))  ################### bert model?
 
+        vocab_path = os.path.join(args.input_path + 'embed_vocab_file', item,
+                                      '{}_{}_{}_{}_word2embed.pkl'.format(args.source_file, item, time_window,
+                                                                          args.bert_model))
         self.id_dict = pickle.load(open(vocab_path, 'rb'))
 
 
@@ -110,10 +94,6 @@ class eicu_dataset(Dataset):
         return len(self.item_name)
 
     def __getitem__(self, item):
-        # single_item_offset = self.item_offset[item]
-        # single_order_offset = self.item_offset_order[item]
-        # padding = torch.zeros(int(self.max_length) - single_order_offset.size(0))
-        # single_order_offset = torch.cat((single_order_offset, padding), dim=0)
         single_target = self.item_target[item]
 
         if self.target == 'dx_depth1_unique':
@@ -132,19 +112,12 @@ class eicu_dataset(Dataset):
             return self.id_dict[x]
         embedding = list(map(embed_dict, single_item_name))
         embedding = torch.Tensor(embedding)
-        # if self.transformer:
-        #     embedding = embedding + 1
-        #     single_order_offset = torch.cat((torch.Tensor([0]), single_order_offset), dim=0)   # additional zero positional embedding for cls
 
         padding = torch.zeros(int(self.max_length) - embedding.size(0))
         embedding = torch.cat((embedding, padding), dim=-1)
-        # if self.transformer:
-        #     embedding = torch.cat((torch.Tensor([1]), embedding), dim=0)   # 1 for cls
 
-        if not self.transformer:
-            return embedding, single_target, seq_len
-        # elif self.transformer:
-        #     return embedding, single_target, single_order_offset
+        return embedding, single_target, seq_len
+
 
     def preprocess(self, cohort, data_type, item, time_window, target):
         # time window
@@ -184,9 +157,6 @@ class eicu_dataset(Dataset):
 
         item_offset_order = cohort[offset_order_window].apply(lambda x: torch.Tensor(x)).values.tolist()
         item_offset_order = pad_sequence(item_offset_order, batch_first=True)  # shape of (B, max_len)
-        #
-        # item_offset = cohort[offset_window].apply(lambda x: torch.Tensor(x)).values.tolist()
-        # item_offset = pad_sequence(item_offset, batch_first=True)
 
         # target
         if target == 'dx_depth1_unique':
@@ -196,31 +166,18 @@ class eicu_dataset(Dataset):
 
         return item_name, item_target, item_offset_order
 
-class RNNmodels(nn.Module):
+class CodeEmb(nn.Module):
     def __init__(self, args, vocab_size, output_size, device, n_layers = 1):
-        super(RNNmodels, self).__init__()
-        self.bidirection = bool(args.rnn_bidirection)
+        super(CodeEmb, self).__init__()
         embedding_dim = args.embedding_dim
         self.hidden_dim = args.hidden_dim
-        num_directions = 2 if self.bidirection else 1
         dropout = args.dropout
 
         self.device = device
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        # self.embedding = nn.Sequential(nn.Embedding(vocab_size, 768, padding_idx=0),
-        #                                nn.Linear(768, embedding_dim))
-        if args.rnn_model_type == 'gru':
-            self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
-        elif args.rnn_model_type == 'lstm':
-            self.model = nn.LSTM(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True, bidirectional=self.bidirection)
-
-        if self.bidirection:
-            self.linear_1 = nn.Linear(num_directions * self.hidden_dim, self.hidden_dim)
-
+        self.model = nn.GRU(embedding_dim, self.hidden_dim, num_layers=n_layers, dropout=dropout, batch_first=True)
         self.output_fc = nn.Linear(self.hidden_dim, output_size)
-
-        # self.linear_1 = nn.Linear(hidden_dim * num_directions, )     # linear1은 좀 더 생각하기
 
     def forward(self, x, lengths):
         x = self.embedding(x.long().to(self.device))
@@ -233,14 +190,6 @@ class RNNmodels(nn.Module):
         i = range(x.size(0))
 
         output = output_seq[i, lengths -1, :]
-
-        # for bidirection RNN but we are not using it
-        # else:
-        #     forward_output = output_seq[i, lengths -1, :self.hidden_dim]
-        #     backward_output = output_seq[:, 0, self.hidden_dim:]
-        #     output = torch.cat((forward_output, backward_output), dim=-1)
-        #     output = self.linear_1(output)
-
         output = self.output_fc(output)
         return output
 
@@ -256,63 +205,47 @@ def main():
     for target in target_list:
         for seed in seed_list:
             mimic_args = easydict.EasyDict({
-                "bert_induced": False,
+                "DescEmb": False,
                 "source_file": 'mimic',
                 "target": target,
                 "item": 'all',
                 "time_window": '12',
-                "rnn_model_type": 'gru',
                 "batch_size": 512,
                 "n_epochs": 1000,
                 "lr": 1e-4,
                 "max_length": 150,
                 "bert_model": 'bio_clinical_bert',
-                "bert_freeze": True,
                 "cls_freeze": False,
-                "input_path": '/home/hkhxoxo/data/pretrained_ehr/input_data',
-                "path": '/home/hkhxoxo/data/pretrained_ehr/output/KDD_output/',
+                "input_path": '/home/jylee/data/pretrained_ehr/input_data_old/',
+                "path": '/home/jylee/data/pretrained_ehr/output/KDD_output/',
                 "device_number": 0,
-                "concat": False,
-                "only_BCE": True,
                 "dropout": 0.3,
                 "embedding_dim": 128,
                 "hidden_dim": 256,
-                "rnn_bidirection": False,
-                "seed": seed,
-                "notes": 'test on pooled with two models singleRNN',
-                "transformer": False})
+                "seed": seed})
 
             eicu_args = easydict.EasyDict({
-                "bert_induced": False,
+                "DescEmb": False,
                 "source_file": 'eicu',
                 "target": target,
                 "item": 'all',
                 "time_window": '12',
-                "rnn_model_type": 'gru',
                 "batch_size": 512,
                 "n_epochs": 1000,
                 "lr": 1e-4,
                 "max_length": 150,
                 "bert_model": 'bio_clinical_bert',
-                "bert_freeze": True,
                 "cls_freeze": False,
-                "input_path": '/home/hkhxoxo/data/pretrained_ehr/input_data/',
-                "path": '/home/hkhxoxo/data/pretrained_ehr/output/KDD_output/',
+                "input_path": '/home/jylee/data/pretrained_ehr/input_data_old/',
+                "path": '/home/jylee/data/pretrained_ehr/output/KDD_output/',
                 "device_number": 0,
-                "concat": False,
-                "only_BCE": True,
                 "dropout": 0.3,
                 "embedding_dim": 128,
                 "hidden_dim": 256,
-                "rnn_bidirection": False,
-                "seed": seed,
-                "notes": 'test on pooled with two models',
-                "transformer": False})
+                "seed": seed})
 
-            wandb.init(project='test-on-both', entity="pretrained_ehr", config=mimic_args, reinit=True)
-
-            mimic_model_name = 'trained_single_rnn_{}_{}_{}_onlyBCE'.format(mimic_args.seed, None, 1e-4)
-            eicu_model_name = 'trained_single_rnn_{}_{}_{}_onlyBCE'.format(eicu_args.seed, None, 1e-4)
+            mimic_model_name = 'trained_single_rnn_{}_best_auprc.pt'.format(mimic_args.seed)
+            eicu_model_name = 'trained_single_rnn_{}_best_auprc.pt'.format(eicu_args.seed)
 
             target_directory = target
             if target_directory == 'los>3day':
@@ -320,8 +253,8 @@ def main():
             elif target_directory == 'los>7day':
                 target_directory = 'los_7days'
 
-            mimic_path = '/home/hkhxoxo/data/pretrained_ehr/output/KDD_output/all/singleRNN/mimic/{}'.format(target_directory)
-            eicu_path = '/home/hkhxoxo/data/pretrained_ehr/output/KDD_output/all/singleRNN/eicu/{}'.format(target_directory)
+            mimic_path = '/home/jylee/data/pretrained_ehr/output/KDD_output/all/singleRNN/mimic/{}'.format(target_directory)
+            eicu_path = '/home/jylee/data/pretrained_ehr/output/KDD_output/all/singleRNN/eicu/{}'.format(target_directory)
 
             mimic_path = os.path.join(mimic_path, mimic_model_name)
             eicu_path = os.path.join(eicu_path, eicu_model_name)
@@ -331,8 +264,8 @@ def main():
             else:
                 output_size = 1
 
-            mimic_model = RNNmodels(mimic_args, vocab_size=2377, output_size=output_size, device=device)
-            eicu_model = RNNmodels(eicu_args, vocab_size=1344, output_size=output_size, device=device)
+            mimic_model = CodeEmb(mimic_args, vocab_size=2377, output_size=output_size, device=device).to(device)
+            eicu_model = CodeEmb(eicu_args, vocab_size=1344, output_size=output_size, device=device).to(device)
 
             mimic_param = torch.load(mimic_path)
             eicu_param = torch.load(eicu_path)
@@ -344,8 +277,8 @@ def main():
             mimic_model.eval()
             eicu_model.eval()
 
-            mimic_test_dataloader = singlernn_get_dataloader(mimic_args, data_type='test')
-            eicu_test_dataloader = singlernn_get_dataloader(eicu_args, data_type='test')
+            mimic_test_dataloader = CodeEmb_get_dataloader(mimic_args, data_type='test')
+            eicu_test_dataloader = CodeEmb_get_dataloader(eicu_args, data_type='test')
 
             mimic_model.eval()
             eicu_model.eval()
@@ -383,9 +316,6 @@ def main():
 
                 test_auprc = average_precision_score(truths_test, preds_test, average='micro')
                 print('[{}-{}], test_auprc:{:.3f}'.format(target, seed, test_auprc))
-                wandb.log({'test_auprc': test_auprc})
-
-
 
 
 if __name__ == '__main__':
