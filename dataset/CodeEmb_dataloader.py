@@ -38,7 +38,6 @@ class CodeEmb_dataset(Dataset):
         time_window = args.time_window
 
         if source_file == 'both':
-
             mimic_path = os.path.join(args.input_path[:-1], item,
                                 'mimic_{}_{}_{}_{}.pkl'.format(time_window, item, max_length, args.seed))
             eicu_path = os.path.join(args.input_path[:-1], item,

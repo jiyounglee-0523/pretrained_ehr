@@ -49,10 +49,8 @@ class Few_Shot_Dataset(Dataset):
         item = args.item
         self.max_length = args.max_length
         time_window = args.time_window
-        self.word_max_length = args.word_max_length
-        self.bert_induced = args.bert_induced
+        self.bert_induced = args.DescEmb
         source_file = args.source_file
-        self.transformer = args.transformer
         few_shot = args.few_shot
 
         if test_file == 'both':
@@ -222,7 +220,7 @@ class Tester(nn.Module):
         elif file_target_name == 'los>7day':
             file_target_name = 'los_7days'
 
-        if args.DescEmb and args.bert_freeze and not args.cls_freeze:
+        if args.DescEmb and not args.cls_freeze:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
                 self.model = DescEmb(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
@@ -233,7 +231,7 @@ class Tester(nn.Module):
             filename = 'cls_learnable_{}_{}'.format(args.bert_model, args.seed)
 
 
-        elif args.bert_induced and args.bert_freeze and args.cls_freeze:
+        elif args.DescEmb and args.cls_freeze:
             model_directory = 'cls_learnable'
             if args.source_file == 'both':
                 self.model = DescEmb(args=args, output_size=output_size, device=self.device, target_file='both').to(device)
@@ -242,43 +240,37 @@ class Tester(nn.Module):
             print('bert freeze, cls_freeze, RNN')
             filename = 'cls_fixed_{}_{}'.format(args.bert_model, args.seed)
 
-        elif args.bert_induced and not args.bert_freeze and not args.transformer:
-            model_directory = 'bert_finetune'
-            self.model = post_predictivelayer(args=args, output_size=output_size).to(device)
-            print('bert finetuning')
-
-
-        elif not args.bert_induced:
+        elif not args.DescEmb:
             model_directory = 'singleRNN'
 
             if args.source_file == 'both':
                 if args.item == 'lab':
-                    vocab_size = 14371 if args.concat else 448
+                    vocab_size = 448
                 elif args.item == 'med':
-                    vocab_size = 4898 if args.concat else 2812
+                    vocab_size = 2812
                 elif args.item == 'inf':
                     vocab_size = 979
                 elif args.item == 'all':
-                    vocab_size = 15794 if args.concat else 3672
+                    vocab_size = 3672
             else:
                 if args.test_file == 'mimic':
                     if args.item == 'lab':
-                        vocab_size = 5110 if args.concat else 359
+                        vocab_size = 359
                     elif args.item == 'med':
-                        vocab_size = 2211 if args.concat else 1535
+                        vocab_size = 1535
                     elif args.item == 'inf':
                         vocab_size = 485
                     elif args.item == 'all':
-                        vocab_size = 7563 if args.concat else 2377
+                        vocab_size = 2377
                 elif args.test_file == 'eicu':
                     if args.item == 'lab':
-                        vocab_size = 9659 if args.concat else 134
+                        vocab_size = 134
                     elif args.item == 'med':
-                        vocab_size = 2693 if args.concat else 1283
+                        vocab_size = 1283
                     elif args.item == 'inf':
                         vocab_size = 495
                     elif args.item == 'all':
-                        vocab_size = 8532 if args.concat else 1344
+                        vocab_size = 1344
             self.model = CodeEmb(args, vocab_size, output_size, self.device).to(device)
             print('single rnn')
             filename = 'trained_single_rnn_{}'.format(args.seed)
@@ -287,11 +279,11 @@ class Tester(nn.Module):
         self.source_path = os.path.join(args.path, args.item, model_directory, args.source_file, file_target_name, filename)
 
         if args.cls_freeze:
-            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed_onlyBCE'.format(args.few_shot, args.source_file,
+            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_clsfixed'.format(args.few_shot, args.source_file,
                 args.test_file, args.bert_model, seed)
 
         elif not args.cls_freeze:
-            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}_onlyBCE'.format(args.few_shot, args.source_file, args.test_file,
+            target_filename = 'few_shot{}_from{}_to{}_model{}_seed{}'.format(args.few_shot, args.source_file, args.test_file,
                                                                                      args.bert_model, seed)
 
         target_path = os.path.join(args.path, args.item, model_directory, args.test_file, file_target_name, target_filename)
@@ -485,7 +477,7 @@ def main():
     parser.add_argument('--test_file', choices=['mimic', 'eicu', 'both'], type=str, default='eicu')
     parser.add_argument('--few_shot', type=float, choices=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0], default=0.0)
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
-    parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='med')
+    parser.add_argument('--item', choices=['all'], type=str, default='med')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--dropout', type=float, default=0.3)
@@ -495,16 +487,12 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny'], type=str, default='bio_bert')
-    parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/', help='data directory')
     parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/', help='model parameter directory')
-    parser.add_argument('--word_max_length', type=int, default=15)  # tokenized word max_length, used in padding
-    parser.add_argument('--device_number', type=str, default='7')
     parser.add_argument('--cls_freeze', action='store_true')
     args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device_number)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     if args.source_file == args.test_file:
         assert args.few_shot == 0.0, "there is no few_shot if source and test file are the same"

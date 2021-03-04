@@ -19,7 +19,7 @@ class DescEmb(nn.Module):
         self.embed = nn.Embedding(initial_embed_weight.size(0), initial_embed_weight.size(1), _weight=initial_embed_weight)
         self.compress_fc = nn.Linear(initial_embed_weight.size(1), args.embedding_dim)
 
-        self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, bidirectional=self.bidirection, num_layers=n_layers)
+        self.model = nn.GRU(args.embedding_dim, self.hidden_dim, dropout=dropout, batch_first=True, num_layers=n_layers)
 
         self.output_fc = nn.Linear(self.hidden_dim, output_size)
 

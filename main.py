@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--DescEmb', action='store_true', help='True if DescEmb, False if CodeEmb')
     parser.add_argument('--source_file', choices=['mimic', 'eicu', 'both'], type=str, default='mimic', help='both for pooling')
     parser.add_argument('--target', choices=['readmission', 'mortality', 'los>3day', 'los>7day', 'dx_depth1_unique'], type=str, default='readmission')
-    parser.add_argument('--item', choices=['lab', 'med', 'inf', 'all'], type=str, default='lab')
+    parser.add_argument('--item', choices=['all'], type=str, default='lab')
     parser.add_argument('--time_window', choices=['12', '24', '36', '48', 'Total'], type=str, default='12')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--dropout', type=float, default=0.3)
@@ -22,43 +22,29 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--max_length', type=str, default='150')
     parser.add_argument('--bert_model', choices=['bert', 'bio_clinical_bert', 'bio_bert', 'pubmed_bert', 'blue_bert', 'bert_mini', 'bert_tiny', 'bert_small'], type=str)
-    parser.add_argument('--bert_freeze', action='store_true')
     parser.add_argument('--cls_freeze', action='store_true')
     parser.add_argument('--input_path', type=str, default='/home/jylee/data/pretrained_ehr/input_data/', help='data directory')
-    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/')
-    # parser.add_argument('--word_max_length', type=int, default=30)    # tokenized word max_length, used in padding
+    parser.add_argument('--path', type=str, default='/home/jylee/data/pretrained_ehr/output/KDD_output/', help='model saving directory')
     args = parser.parse_args()
 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    if args.DescEmb and args.bert_freeze:
+    if args.DescEmb:
         from dataset.DescEmb_dataloader import DescEmb_get_dataloader as get_dataloader
         from trainer.DescEmb_trainer import DescEmb_Trainer as Trainer
-        print('DescEmb')
-
-    if args.DescEmb and not args.bert_freeze:
-        from dataset.bert_finetune_dataloader import bertfinetune_get_dataloader as get_dataloader
-        from trainer.bert_finetune_trainer import BertFinetune_Trainer as Trainer
-        print('bert finetune')
+        if args.cls_freeze:
+            print('DesEmb-FR')
+        else:
+            print('DescEmb-FT')
 
     elif not args.DescEmb:
         from dataset.CodeEmb_dataloader import CodeEmb_get_dataloader as get_dataloader
         from trainer.CodeEmb_trainer import Trainer
-        print('single_rnn')
-
-
-# ================= not in use ===========================
-    # if args.bert_induced:
-    #     from dataset.prebert_dict_dataloader import bertinduced_dict_get_dataloader as get_dataloader
-    #     from trainer.evaluation_both_trainer import bert_dict_Trainer as Trainer
-    # else:
-    #     from dataset.singlernn_dataloader import singlernn_get_dataloader as get_dataloader
-    #     from trainer.base_trainer_evaluateonboth import Trainer
-# ================= not in use ============================
+        print('CodeEmb')
 
 
     mp.set_sharing_strategy('file_system')
 
-    print('start running')
     SEED = [2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029]
 
     for seed in SEED:
